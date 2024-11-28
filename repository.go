@@ -63,13 +63,19 @@ var (
 			).Line().Line()}
 		},
 		getAllMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			return []Code{fnTargetKeyword.Id(getAllMethodKey).Params(
-				Id("input").Id("string"),
-			).Params(
-				Id("string"), Error(),
+			return []Code{fnTargetKeyword.Id(getAllMethodKey).Params().Add(
+				Index().Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
 			).Block(
-				Comment("TODO: implement me!"),
-				Id("panic").Call(Lit("implement me!")),
+				Var().Id("found").Index().Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
+				If(
+					Id("res").Op(":=").Id("c").Dot("db").Dot("Model").Call(
+						Op("&").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName).Block(),
+					).Dot("Find").Call(Op("&").Id("found")),
+					Id("res").Dot("Error").Op("!=").Nil(),
+				).Block(
+					Return(Nil(), Id("res").Dot("Error")),
+				),
+				Return(Op("&").Id("found"), Nil()),
 			).Line().Line()}
 		},
 		updateMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
