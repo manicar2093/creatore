@@ -17,15 +17,15 @@ const (
 	deleteByIdMethodKey = "DeleteById"
 )
 
-type methodGenerators func(input usefulData, fnTargetKeyword *Statement) Code
+type methodGenerators func(input usefulData, fnTargetKeyword *Statement) []Code
 
 var (
 	RepoSupportedMethods = []string{
 		createMethodKey, getByIdMethodKey, getAllMethodKey, updateMethodKey, updateSomeMethodKey, deleteByIdMethodKey,
 	}
 	repoMethodsGeneratorsMap = map[string]methodGenerators{
-		createMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
-			return fnTargetKeyword.Id(createMethodKey).Params(
+		createMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+			return []Code{fnTargetKeyword.Id(createMethodKey).Params(
 				Id("input").Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
 			).Error().
 				Block(
@@ -40,57 +40,57 @@ var (
 						Return(
 							Nil(),
 						),
-				).Line().Line()
+				).Line().Line()}
 		},
-		getByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
-			return fnTargetKeyword.Id(getByIdMethodKey).Params(
+		getByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+			return []Code{fnTargetKeyword.Id(getByIdMethodKey).Params(
 				Id("input").Id("string"),
 			).Params(
 				Id("string"), Error(),
 			).Block(
 				Comment("TODO: implement me!"),
 				Id("panic").Call(Lit("implement me!")),
-			).Line().Line()
+			).Line().Line()}
 		},
-		getAllMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
-			return fnTargetKeyword.Id(getAllMethodKey).Params(
+		getAllMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+			return []Code{fnTargetKeyword.Id(getAllMethodKey).Params(
 				Id("input").Id("string"),
 			).Params(
 				Id("string"), Error(),
 			).Block(
 				Comment("TODO: implement me!"),
 				Id("panic").Call(Lit("implement me!")),
-			).Line().Line()
+			).Line().Line()}
 		},
-		updateMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
-			return fnTargetKeyword.Id(updateMethodKey).Params(
+		updateMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+			return []Code{fnTargetKeyword.Id(updateMethodKey).Params(
 				Id("input").Id("string"),
 			).Params(
 				Id("string"), Error(),
 			).Block(
 				Comment("TODO: implement me!"),
 				Id("panic").Call(Lit("implement me!")),
-			).Line().Line()
+			).Line().Line()}
 		},
-		updateSomeMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
-			return fnTargetKeyword.Id(updateSomeMethodKey).Params(
+		updateSomeMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+			return []Code{fnTargetKeyword.Id(updateSomeMethodKey).Params(
 				Id("input").Id("string"),
 			).Params(
 				Id("string"), Error(),
 			).Block(
 				Comment("TODO: implement me!"),
 				Id("panic").Call(Lit("implement me!")),
-			).Line().Line()
+			).Line().Line()}
 		},
-		deleteByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
-			return fnTargetKeyword.Id(deleteByIdMethodKey).Params(
+		deleteByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+			return []Code{fnTargetKeyword.Id(deleteByIdMethodKey).Params(
 				Id("input").Id("string"),
 			).Params(
 				Id("string"), Error(),
 			).Block(
 				Comment("TODO: implement me!"),
 				Id("panic").Call(Lit("implement me!")),
-			).Line().Line()
+			).Line().Line()}
 		},
 	}
 )
@@ -122,9 +122,10 @@ func generateRepositoryCode(data usefulData) []Code {
 	).Line().Line())
 
 	underscore.Each(RepoSupportedMethods, func(s string) {
-		result = append(result, repoMethodsGeneratorsMap[s](data, Func().Params(
+		funcContext := Func().Params(
 			Id("c").Op("*").Id(data.repositoryStructName),
-		).Clone()))
+		)
+		result = append(result, repoMethodsGeneratorsMap[s](data, funcContext)...)
 	})
 
 	return result
