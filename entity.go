@@ -35,7 +35,13 @@ func generateEntityCode(input usefulData) Code {
 }
 
 func handleEntityFields(fields []fieldMeta) []Code {
-	return underscore.Map(fields, func(t fieldMeta) Code {
-		return t.typeAsJenCode.Tag(t.tags)
+	return underscore.Map(fields, func(f fieldMeta) Code {
+		builder := Null().Id(f.nameForStructAttribute)
+		if f.field.IsOptional {
+			builder.Qual("github.com/manicar2093/goption", "goption").Index(f.typeAsJenCode)
+		} else {
+			builder.Add(f.typeAsJenCode)
+		}
+		return builder.Tag(f.tags)
 	})
 }

@@ -30,12 +30,12 @@ var (
 			).Error().
 				Block(
 					If(
-						Error().Op(":=").Id("c").Dot("db").Dot("Create").Call(
+						Id("res").Op(":=").Id("c").Dot("db").Dot("Create").Call(
 							Id("input"),
 						),
-						Err().Op("!=").Nil(),
+						Id("res").Dot("Error").Op("!=").Nil(),
 					).Block(
-						Return(Error()),
+						Return(Id("res").Dot("Error")),
 					).Line().
 						Return(
 							Nil(),
@@ -44,12 +44,22 @@ var (
 		},
 		getByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
 			return []Code{fnTargetKeyword.Id(getByIdMethodKey).Params(
-				Id("input").Id("string"),
+				Id("id").Add(input.idTypeAsJenCode),
 			).Params(
-				Id("string"), Error(),
+				Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
+				Error(),
 			).Block(
-				Comment("TODO: implement me!"),
-				Id("panic").Call(Lit("implement me!")),
+				Var().Id("found").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
+				If(
+					Id("res").Op(":=").Id("c").Dot("db").Dot("First").Call(
+						Op("&").Id("found"),
+						Id("id"),
+					),
+					Id("res").Dot("Error").Op("!=").Nil(),
+				).Block(
+					Return(Nil(), Id("res").Dot("Error")),
+				),
+				Return(Op("&").Id("found"), Nil()),
 			).Line().Line()}
 		},
 		getAllMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
