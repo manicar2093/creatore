@@ -3,7 +3,7 @@ package main
 func main() {
 	data := CreateEntityInput{
 		EntityName: "User",
-		
+		IsUuid:     true,
 		Fields: []EntityField{
 			{
 				Name: "Name",

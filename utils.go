@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"github.com/dave/jennifer/jen"
+	. "github.com/dave/jennifer/jen"
 	"github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
 	"github.com/rjNemo/underscore"
@@ -47,21 +47,24 @@ func createUsefulData(input CreateEntityInput) usefulData {
 type fieldMeta struct {
 	nameForTags            string
 	nameForStructAttribute string
-	typeAsJenCode          jen.Code
+	typeAsJenCode          *Statement
 	field                  EntityField
 	isId                   bool
+	tags                   map[string]string
 }
 
 func normalizeEntityFieldsData(input CreateEntityInput) []fieldMeta {
 	input.Fields = append([]EntityField{createIdField(input)}, input.Fields...)
 
 	return underscore.Map(input.Fields, func(f EntityField) fieldMeta {
+		nameForStructAttribute := strcase.ToCamel(f.Name)
 		return fieldMeta{
 			nameForTags:            strcase.ToSnake(f.Name),
-			nameForStructAttribute: strcase.ToCamel(f.Name),
-			typeAsJenCode:          getType(f.Type),
+			nameForStructAttribute: nameForStructAttribute,
+			typeAsJenCode:          getType(f, nameForStructAttribute),
 			field:                  f,
 			isId:                   f.Name == "id",
+			tags:                   getFieldTags(f),
 		}
 	})
 }
@@ -79,15 +82,39 @@ func createIdField(input CreateEntityInput) EntityField {
 	}
 }
 
-func getType(t string) jen.Code {
-	switch t {
+func getType(f EntityField, nameForStructAttribute string) *Statement {
+	builder := Null().Id(nameForStructAttribute)
+
+	var getTypeQual *Statement
+
+	switch f.Type {
 	case "decimal":
-		return jen.Qual("github.com/quagmt/udecimal", "Decimal")
+		getTypeQual = Qual("github.com/quagmt/udecimal", "Decimal")
 	case "uuid":
-		return jen.Qual("github.com/google/uuid", "UUID")
+		getTypeQual = Qual("github.com/google/uuid", "UUID")
 	case "time":
-		return jen.Qual("time", "Time")
+		getTypeQual = Qual("time", "Time")
 	default:
-		return jen.Id(t)
+		getTypeQual = Id(f.Type)
 	}
+
+	if f.IsOptional {
+		return builder.Qual("github.com/manicar2093/goption", "goption").Index(getTypeQual)
+	}
+
+	return builder.Add(getTypeQual)
+}
+
+func getFieldTags(field EntityField) map[string]string {
+	tags := make(map[string]string)
+	tags["json"] = strcase.ToSnake(field.Name)
+	tags["mapstructure"] = strcase.ToSnake(field.Name)
+	switch {
+	case field.Name == idKey && field.Type == "uuid":
+		tags["gorm"] = "default:gen_random_uuid()"
+	case field.Name == idKey && field.Type == "uint":
+		tags["gorm"] = "primaryKey"
+	}
+
+	return tags
 }
