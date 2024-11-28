@@ -3,7 +3,7 @@ package main
 func main() {
 	data := CreateEntityInput{
 		EntityName: "User",
-		IsUuid:     true,
+		
 		Fields: []EntityField{
 			{
 				Name: "Name",
@@ -21,10 +21,18 @@ func main() {
 			},
 		},
 	}
-	if err := createEntityFile(data); err != nil {
+	if err := trigger(data); err != nil {
 		panic(err)
 	}
-	if err := createRepositoryFile(CreateRepositoryInput{data}); err != nil {
-		panic(err)
+}
+
+func trigger(input CreateEntityInput) error {
+	data := createUsefulData(input)
+	if err := createEntityFile(input, data); err != nil {
+		return err
 	}
+	if err := createRepositoryFile(input, data); err != nil {
+		return err
+	}
+	return nil
 }
