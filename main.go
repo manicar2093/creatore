@@ -31,7 +31,7 @@ func trigger(input CreateEntityInput) error {
 	if err := createEntityFile(input, data); err != nil {
 		return err
 	}
-	if err := createRepositoryFile(input, data); err != nil {
+	if err := createRepositoryFile(data); err != nil {
 		return err
 	}
 	return nil

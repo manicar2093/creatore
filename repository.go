@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	jen "github.com/dave/jennifer/jen"
+	. "github.com/dave/jennifer/jen"
 	"github.com/rjNemo/underscore"
 
 	"os"
@@ -17,123 +17,113 @@ const (
 	deleteByIdMethodKey = "DeleteById"
 )
 
-type methodGenerators func(input CreateEntityInput, fnKeyword *jen.Statement) jen.Code
+type methodGenerators func(input usefulData, fnTargetKeyword *Statement) Code
 
 var (
 	RepoSupportedMethods = []string{
 		createMethodKey, getByIdMethodKey, getAllMethodKey, updateMethodKey, updateSomeMethodKey, deleteByIdMethodKey,
 	}
 	repoMethodsGeneratorsMap = map[string]methodGenerators{
-		createMethodKey: func(input CreateEntityInput, fnKeyword *jen.Statement) jen.Code {
-			return fnKeyword.Id(createMethodKey).Params(
-				jen.Id("input").Id("string"),
+		createMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
+			return fnTargetKeyword.Id(createMethodKey).Params(
+				Id("input").Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
+			).Error().
+				Block(
+					If(
+						Error().Op(":=").Id("c").Dot("db").Dot("Create").Call(
+							Id("input"),
+						),
+						Err().Op("!=").Nil(),
+					).Block(
+						Return(Error()),
+					).Line().
+						Return(
+							Nil(),
+						),
+				).Line().Line()
+		},
+		getByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
+			return fnTargetKeyword.Id(getByIdMethodKey).Params(
+				Id("input").Id("string"),
 			).Params(
-				jen.Id("string"), jen.Error(),
+				Id("string"), Error(),
 			).Block(
-				jen.Comment("TODO: implement me!"),
-				jen.Return(
-					jen.Lit(""),
-					jen.Nil(),
-				),
+				Comment("TODO: implement me!"),
+				Id("panic").Call(Lit("implement me!")),
 			).Line().Line()
 		},
-		getByIdMethodKey: func(input CreateEntityInput, fnKeyword *jen.Statement) jen.Code {
-			return fnKeyword.Id(getByIdMethodKey).Params(
-				jen.Id("input").Id("string"),
+		getAllMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
+			return fnTargetKeyword.Id(getAllMethodKey).Params(
+				Id("input").Id("string"),
 			).Params(
-				jen.Id("string"), jen.Error(),
+				Id("string"), Error(),
 			).Block(
-				jen.Comment("TODO: implement me!"),
-				jen.Return(
-					jen.Lit(""),
-					jen.Nil(),
-				),
+				Comment("TODO: implement me!"),
+				Id("panic").Call(Lit("implement me!")),
 			).Line().Line()
 		},
-		getAllMethodKey: func(input CreateEntityInput, fnKeyword *jen.Statement) jen.Code {
-			return fnKeyword.Id(getAllMethodKey).Params(
-				jen.Id("input").Id("string"),
+		updateMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
+			return fnTargetKeyword.Id(updateMethodKey).Params(
+				Id("input").Id("string"),
 			).Params(
-				jen.Id("string"), jen.Error(),
+				Id("string"), Error(),
 			).Block(
-				jen.Comment("TODO: implement me!"),
-				jen.Return(
-					jen.Lit(""),
-					jen.Nil(),
-				),
+				Comment("TODO: implement me!"),
+				Id("panic").Call(Lit("implement me!")),
 			).Line().Line()
 		},
-		updateMethodKey: func(input CreateEntityInput, fnKeyword *jen.Statement) jen.Code {
-			return fnKeyword.Id(updateMethodKey).Params(
-				jen.Id("input").Id("string"),
+		updateSomeMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
+			return fnTargetKeyword.Id(updateSomeMethodKey).Params(
+				Id("input").Id("string"),
 			).Params(
-				jen.Id("string"), jen.Error(),
+				Id("string"), Error(),
 			).Block(
-				jen.Comment("TODO: implement me!"),
-				jen.Return(
-					jen.Lit(""),
-					jen.Nil(),
-				),
+				Comment("TODO: implement me!"),
+				Id("panic").Call(Lit("implement me!")),
 			).Line().Line()
 		},
-		updateSomeMethodKey: func(input CreateEntityInput, fnKeyword *jen.Statement) jen.Code {
-			return fnKeyword.Id(updateSomeMethodKey).Params(
-				jen.Id("input").Id("string"),
+		deleteByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) Code {
+			return fnTargetKeyword.Id(deleteByIdMethodKey).Params(
+				Id("input").Id("string"),
 			).Params(
-				jen.Id("string"), jen.Error(),
+				Id("string"), Error(),
 			).Block(
-				jen.Comment("TODO: implement me!"),
-				jen.Return(
-					jen.Lit(""),
-					jen.Nil(),
-				),
-			).Line().Line()
-		},
-		deleteByIdMethodKey: func(input CreateEntityInput, fnKeyword *jen.Statement) jen.Code {
-			return fnKeyword.Id(deleteByIdMethodKey).Params(
-				jen.Id("input").Id("string"),
-			).Params(
-				jen.Id("string"), jen.Error(),
-			).Block(
-				jen.Comment("TODO: implement me!"),
-				jen.Return(
-					jen.Lit(""),
-					jen.Nil(),
-				),
+				Comment("TODO: implement me!"),
+				Id("panic").Call(Lit("implement me!")),
 			).Line().Line()
 		},
 	}
 )
 
-func createRepositoryFile(input CreateEntityInput, data usefulData) error {
-	jf := jen.NewFile(data.entityServicePackageName)
+func createRepositoryFile(data usefulData) error {
+	jf := NewFile(data.entityServicePackageName)
 	jf.PackageComment("Code generated by creatore")
 
-	jf.Add(generateRepositoryCode(input, data)...)
+	jf.Add(generateRepositoryCode(data)...)
 
 	return jf.Render(os.Stdout)
 }
 
-func generateRepositoryCode(input CreateEntityInput, data usefulData) []jen.Code {
-	var result []jen.Code
-	result = append(result, jen.Null().Type().Id(data.repositoryStructName).Struct(
-		jen.Id("db").Op("*").Qual("github.com/manicar2093/winter/connections", "connections"),
+func generateRepositoryCode(data usefulData) []Code {
+	var result []Code
+	result = append(result, Null().Type().Id(data.repositoryStructName).Struct(
+		Id("db").Op("*").Qual("github.com/manicar2093/winter/connections", "connections"),
 	).Line().Line())
-	result = append(result, jen.Null().Func().Id(data.repositoryStructConstructorName).Params(
-		jen.Id("db").Op("*").Qual("github.com/manicar2093/winter/connections", "connections"),
+	result = append(result, Null().Func().Id(data.repositoryStructConstructorName).Params(
+		Id("db").Op("*").Qual("github.com/manicar2093/winter/connections", "connections"),
 	).Block(
-		jen.Return(
-			jen.Id(fmt.Sprintf("&%s", data.repositoryStructName)).Values(
-				jen.Dict{
-					jen.Id("db"): jen.Id("db"),
+		Return(
+			Id(fmt.Sprintf("&%s", data.repositoryStructName)).Values(
+				Dict{
+					Id("db"): Id("db"),
 				},
 			),
 		),
 	).Line().Line())
 
 	underscore.Each(RepoSupportedMethods, func(s string) {
-		result = append(result, repoMethodsGeneratorsMap[s](input, jen.Func().Params(
-			jen.Id("c").Id(fmt.Sprintf("*%s", data.repositoryStructName)),
+		result = append(result, repoMethodsGeneratorsMap[s](data, Func().Params(
+			Id("c").Op("*").Id(data.repositoryStructName),
 		).Clone()))
 	})
 

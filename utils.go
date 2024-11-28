@@ -19,7 +19,8 @@ type usefulData struct {
 	// entitiesKey contains literal "entities"
 	entitiesKey string
 	// fields contains all fields with useful data
-	fields []fieldMeta
+	fields     []fieldMeta
+	moduleName string
 }
 
 func createUsefulData(input CreateEntityInput) usefulData {
@@ -41,6 +42,7 @@ func createUsefulData(input CreateEntityInput) usefulData {
 		entityStructName:                entityStructName,
 		entitiesKey:                     entitiesKey,
 		fields:                          normalizeEntityFieldsData(input),
+		moduleName:                      "github.com/user/package",
 	}
 }
 
@@ -48,13 +50,15 @@ type fieldMeta struct {
 	nameForTags            string
 	nameForStructAttribute string
 	typeAsJenCode          *Statement
+	idTypeAsJenCode        *Statement
 	field                  EntityField
 	isId                   bool
 	tags                   map[string]string
 }
 
 func normalizeEntityFieldsData(input CreateEntityInput) []fieldMeta {
-	input.Fields = append([]EntityField{createIdField(input)}, input.Fields...)
+	idField := createIdField(input)
+	input.Fields = append([]EntityField{idField}, input.Fields...)
 
 	return underscore.Map(input.Fields, func(f EntityField) fieldMeta {
 		nameForStructAttribute := strcase.ToCamel(f.Name)
@@ -64,6 +68,7 @@ func normalizeEntityFieldsData(input CreateEntityInput) []fieldMeta {
 			typeAsJenCode:          getType(f, nameForStructAttribute),
 			field:                  f,
 			isId:                   f.Name == "id",
+			idTypeAsJenCode:        getType(idField, nameForStructAttribute),
 			tags:                   getFieldTags(f),
 		}
 	})
