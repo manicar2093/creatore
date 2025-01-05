@@ -9,38 +9,41 @@ import (
 )
 
 const (
-	createMethodKey     = "Create"
-	getByIdMethodKey    = "GetById"
-	getAllMethodKey     = "GetAll"
-	updateMethodKey     = "Update"
-	updateSomeMethodKey = "UpdateSome"
-	deleteByIdMethodKey = "DeleteById"
+	saveMethodKey                = "Save"
+	getByIdMethodKey             = "GetById"
+	getAllMethodKey              = "GetAll"
+	updateSelectiveByIdMethodKey = "UpdateSelectiveById"
+	deleteByIdMethodKey          = "DeleteById"
 )
 
 type methodGenerators func(input usefulData, fnTargetKeyword *Statement) []Code
 
 var (
 	RepoSupportedMethods = []string{
-		createMethodKey, getByIdMethodKey, getAllMethodKey, updateMethodKey, updateSomeMethodKey, deleteByIdMethodKey,
+		saveMethodKey, getByIdMethodKey, getAllMethodKey, updateSelectiveByIdMethodKey, deleteByIdMethodKey,
 	}
 	repoMethodsGeneratorsMap = map[string]methodGenerators{
-		createMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			return []Code{fnTargetKeyword.Id(createMethodKey).Params(
-				Id("input").Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
-			).Error().
-				Block(
-					If(
-						Id("res").Op(":=").Id("c").Dot("db").Dot("Create").Call(
-							Id("input"),
-						),
-						Id("res").Dot("Error").Op("!=").Nil(),
-					).Block(
-						Return(Id("res").Dot("Error")),
-					).Line().
-						Return(
-							Nil(),
-						),
-				).Line().Line()}
+		saveMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+
+			return []Code{
+				Commentf("%s can Create and Update an entity. You can use this for http PATH method. Check https://gorm.io/docs/update.html#Save-All-Fields for more info", saveMethodKey).Line(),
+				fnTargetKeyword.Id(saveMethodKey).Params(
+					Id("input").Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
+				).Error().
+					Block(
+						If(
+							Id("res").Op(":=").Id("c").Dot("db").Dot("Save").Call(
+								Id("input"),
+							),
+							Id("res").Dot("Error").Op("!=").Nil(),
+						).Block(
+							Return(Id("res").Dot("Error")),
+						).Line().
+							Return(
+								Nil(),
+							),
+					).Line().Line(),
+			}
 		},
 		getByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
 			return []Code{fnTargetKeyword.Id(getByIdMethodKey).Params(
@@ -78,25 +81,69 @@ var (
 				Return(Op("&").Id("found"), Nil()),
 			).Line().Line()}
 		},
-		updateMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			return []Code{fnTargetKeyword.Id(updateMethodKey).Params(
-				Id("input").Id("string"),
-			).Params(
-				Id("string"), Error(),
+		updateSelectiveByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+			updateInputStructName := fmt.Sprintf("Update%sInput", input.entityStructName)
+
+			strct := Null().Type().Id(updateInputStructName).Struct(
+				underscore.Map(input.fields, func(meta fieldMeta) Code {
+					if meta.field.Name == "Id" {
+						return nil
+					}
+					return Null().Id(meta.nameForStructAttribute).Qual(optionalQual, optionalName).Index(meta.typeAsJenCode).Tag(meta.tags)
+				})...,
+			)
+
+			mapWithUpdateData := Id("updates").Op("=").New(Map(Id("string")).Id("interface{}"))
+			resultVar := Id("result").Op("=").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName).Block()
+
+			varDeclarations := Var().Defs(resultVar, mapWithUpdateData)
+
+			optionValidations := underscore.Map(input.fields, func(meta fieldMeta) Code {
+				if meta.field.Name == "Id" {
+					return nil
+				}
+				return If(Id("changes").Dot(meta.nameForStructAttribute).Dot("IsPresent").Call()).Block(
+					Id("updates").
+						Index(Lit(meta.nameForTags)).
+						Op("=").
+						Id("changes").
+						Dot(meta.nameForStructAttribute).
+						Dot("MustGet").
+						Call(),
+				)
+			})
+
+			updateBody := []Code{
+				varDeclarations,
+				Line(),
+			}
+			updateBody = append(updateBody, optionValidations...)
+			updateGormCall := If(
+				Id("res").Op(":=").Id("c").Dot("db").Dot("Model").Call(Id(fmt.Sprintf("&%s", "result"))).Dot("Clauses").Call(Id("clause.Returning{}")).Dot("Where").Call(Lit("id = ?"), Id("id")).Dot("Updates").Call(Id("updates")),
+				Id("res").Dot("Error").Op("!=").Nil(),
 			).Block(
-				Comment("TODO: implement me!"),
-				Id("panic").Call(Lit("implement me!")),
-			).Line().Line()}
-		},
-		updateSomeMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			return []Code{fnTargetKeyword.Id(updateSomeMethodKey).Params(
-				Id("input").Id("string"),
-			).Params(
-				Id("string"), Error(),
-			).Block(
-				Comment("TODO: implement me!"),
-				Id("panic").Call(Lit("implement me!")),
-			).Line().Line()}
+				Return(Nil(), Id("res").Dot("Error")),
+			)
+			updateBody = append(updateBody,
+				Line(),
+				updateGormCall,
+				Return(Id("result"), Nil()),
+			)
+
+			return []Code{
+				strct,
+				Line(),
+				Line(),
+				Commentf("%s can select which field has to be updated from given input", updateSelectiveByIdMethodKey),
+				Line(),
+				fnTargetKeyword.Id(updateSelectiveByIdMethodKey).Params(
+					Id("id").Add(input.idTypeAsJenCode),
+					Id("changes").Id(updateInputStructName),
+				).Params(
+					Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName), Error(),
+				).Block(
+					updateBody...,
+				).Line().Line()}
 		},
 		deleteByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
 			return []Code{fnTargetKeyword.Id(deleteByIdMethodKey).Params(

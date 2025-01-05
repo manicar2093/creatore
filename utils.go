@@ -6,7 +6,6 @@ import (
 	"github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
 	"github.com/rjNemo/underscore"
-	"log"
 )
 
 type usefulData struct {
@@ -69,7 +68,6 @@ func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement
 		nameForFunctionParams := strcase.ToLowerCamel(f.Name)
 		if f.Name == "Id" {
 			idType = getType(idField, nameForStructAttribute)
-			log.Println(idType)
 		}
 
 		return fieldMeta{
