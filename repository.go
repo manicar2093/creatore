@@ -11,7 +11,7 @@ import (
 const (
 	saveMethodKey                = "Save"
 	getByIdMethodKey             = "GetById"
-	getAllMethodKey              = "GetAll"
+	getAllPaginatedMethodKey     = "GetAllPaginated"
 	updateSelectiveByIdMethodKey = "UpdateSelectiveById"
 	deleteByIdMethodKey          = "DeleteById"
 )
@@ -20,7 +20,7 @@ type methodGenerators func(input usefulData, fnTargetKeyword *Statement) []Code
 
 var (
 	RepoSupportedMethods = []string{
-		saveMethodKey, getByIdMethodKey, getAllMethodKey, updateSelectiveByIdMethodKey, deleteByIdMethodKey,
+		saveMethodKey, getByIdMethodKey, getAllPaginatedMethodKey, updateSelectiveByIdMethodKey, deleteByIdMethodKey,
 	}
 	repoMethodsGeneratorsMap = map[string]methodGenerators{
 		saveMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
@@ -65,20 +65,27 @@ var (
 				Return(Op("&").Id("found"), Nil()),
 			).Line().Line()}
 		},
-		getAllMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			return []Code{fnTargetKeyword.Id(getAllMethodKey).Params().Add(
-				Index().Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
+		getAllPaginatedMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
+			return []Code{fnTargetKeyword.Id(getAllPaginatedMethodKey).Params(
+				Id("pageNumber").Op(",").Id("pageSize").Int(),
+			).Params(
+				Op("*").Qual("github.com/manicar2093/gormpager", "Page").Index(Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName)),
+				Error(),
 			).Block(
-				Var().Id("found").Index().Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
-				If(
-					Id("res").Op(":=").Id("c").Dot("db").Dot("Model").Call(
-						Op("&").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName).Block(),
-					).Dot("Find").Call(Op("&").Id("found")),
-					Id("res").Dot("Error").Op("!=").Nil(),
-				).Block(
-					Return(Nil(), Id("res").Dot("Error")),
+				Id("pager").Op(":=").Qual("github.com/manicar2093/gormpager", "Page").Index(Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName)).Values(
+					Id("PageSize").Op(":").Int64().Call(Id("pageSize")),
+					Id("CurrentPage").Op(":").Int64().Call(Id("pageNumber")),
 				),
-				Return(Op("&").Id("found"), Nil()),
+				If(
+					Id("err").Op(":=").Id("pager").Dot("SelectPages").Call(
+						Id("c").Dot("conn").Dot("GormPager"),
+						Id("c").Dot("conn").Dot("DB"),
+					),
+					Id("err").Op("!=").Nil(),
+				).Block(
+					Return(Nil(), Error()),
+				),
+				Return(Op("&").Id("pager"), Nil()),
 			).Line().Line()}
 		},
 		updateSelectiveByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
@@ -93,7 +100,7 @@ var (
 				})...,
 			)
 
-			mapWithUpdateData := Id("updates").Op("=").New(Map(Id("string")).Id("interface{}"))
+			mapWithUpdateData := Id("updates").Op("=").Map(Id("string")).Id("any").Block()
 			resultVar := Id("result").Op("=").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName).Block()
 
 			varDeclarations := Var().Defs(resultVar, mapWithUpdateData)
@@ -127,7 +134,7 @@ var (
 			updateBody = append(updateBody,
 				Line(),
 				updateGormCall,
-				Return(Id("result"), Nil()),
+				Return(Op("&").Id("result"), Nil()),
 			)
 
 			return []Code{
@@ -147,12 +154,21 @@ var (
 		},
 		deleteByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
 			return []Code{fnTargetKeyword.Id(deleteByIdMethodKey).Params(
-				Id("input").Id("string"),
+				Id("id").Add(input.idTypeAsJenCode),
 			).Params(
-				Id("string"), Error(),
+				Error(),
 			).Block(
-				Comment("TODO: implement me!"),
-				Id("panic").Call(Lit("implement me!")),
+				If(
+					Id("res").Op(":=").Id("c").Dot("conn").Dot("Delete").Call(
+						Op("&").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName).Block(),
+						Lit("id = ?"),
+						Id("id"),
+					),
+					Id("res").Dot("Error").Op("!=").Nil(),
+				).Block(
+					Return(Id("res").Dot("Error")),
+				),
+				Return(Nil()),
 			).Line().Line()}
 		},
 	}
