@@ -10,7 +10,8 @@ import (
 
 type usefulData struct {
 	// repositoryStructName contains struct name for repository following this format: <Entity>Repository
-	repositoryStructName            string
+	repositoryStructName string
+	// repositoryStructConstructorName contains how repository constructor method has to be named
 	repositoryStructConstructorName string
 	// entityServicePackageName contains entity package name following the format: <entity_given_by_user>
 	entityServicePackageName string
@@ -19,9 +20,13 @@ type usefulData struct {
 	// entitiesKey contains literal "entities"
 	entitiesKey string
 	// fields contains all fields with useful data
-	fields          []fieldMeta
-	moduleName      string
+	fields []fieldMeta
+	// moduleName contains in which code needs to be generated
+	moduleName string
+	// idTypeAsJenCode contains the id type as qualifier
 	idTypeAsJenCode *Statement
+	// entityStructQualifier contains the quealifier code for entity
+	entityStructQualifier *Statement
 }
 
 func createUsefulData(input CreateEntityInput) usefulData {
@@ -35,6 +40,7 @@ func createUsefulData(input CreateEntityInput) usefulData {
 		entitiesKey                     = "entities"
 		entityStructName                = strcase.ToCamel(input.EntityName)
 		fieldsMeta, idType              = normalizeEntityFieldsData(input)
+		moduleName                      = "github.com/user/package"
 	)
 
 	return usefulData{
@@ -44,8 +50,9 @@ func createUsefulData(input CreateEntityInput) usefulData {
 		entityStructName:                entityStructName,
 		entitiesKey:                     entitiesKey,
 		fields:                          fieldsMeta,
-		moduleName:                      "github.com/user/package",
+		moduleName:                      moduleName, // TODO: This must be configurable
 		idTypeAsJenCode:                 idType,
+		entityStructQualifier:           Qual(fmt.Sprintf("%s/%s", moduleName, entitiesKey), entityStructName),
 	}
 }
 

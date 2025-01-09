@@ -23,154 +23,11 @@ var (
 		saveMethodKey, getByIdMethodKey, getAllPaginatedMethodKey, updateSelectiveByIdMethodKey, deleteByIdMethodKey,
 	}
 	repoMethodsGeneratorsMap = map[string]methodGenerators{
-		saveMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-
-			return []Code{
-				Commentf("%s can Create and Update an entity. You can use this for http PATH method. Check https://gorm.io/docs/update.html#Save-All-Fields for more info", saveMethodKey).Line(),
-				fnTargetKeyword.Id(saveMethodKey).Params(
-					Id("input").Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
-				).Error().
-					Block(
-						If(
-							Id("res").Op(":=").Id("c").Dot("db").Dot("Save").Call(
-								Id("input"),
-							),
-							Id("res").Dot("Error").Op("!=").Nil(),
-						).Block(
-							Return(Id("res").Dot("Error")),
-						).Line().
-							Return(
-								Nil(),
-							),
-					).Line().Line(),
-			}
-		},
-		getByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			return []Code{fnTargetKeyword.Id(getByIdMethodKey).Params(
-				Id("id").Add(input.idTypeAsJenCode),
-			).Params(
-				Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
-				Error(),
-			).Block(
-				Var().Id("found").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName),
-				If(
-					Id("res").Op(":=").Id("c").Dot("db").Dot("First").Call(
-						Op("&").Id("found"),
-						Id("id"),
-					),
-					Id("res").Dot("Error").Op("!=").Nil(),
-				).Block(
-					Return(Nil(), Id("res").Dot("Error")),
-				),
-				Return(Op("&").Id("found"), Nil()),
-			).Line().Line()}
-		},
-		getAllPaginatedMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			return []Code{fnTargetKeyword.Id(getAllPaginatedMethodKey).Params(
-				Id("pageNumber").Op(",").Id("pageSize").Int(),
-			).Params(
-				Op("*").Qual("github.com/manicar2093/gormpager", "Page").Index(Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName)),
-				Error(),
-			).Block(
-				Id("pager").Op(":=").Qual("github.com/manicar2093/gormpager", "Page").Index(Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName)).Values(
-					Id("PageSize").Op(":").Int64().Call(Id("pageSize")),
-					Id("CurrentPage").Op(":").Int64().Call(Id("pageNumber")),
-				),
-				If(
-					Id("err").Op(":=").Id("pager").Dot("SelectPages").Call(
-						Id("c").Dot("conn").Dot("GormPager"),
-						Id("c").Dot("conn").Dot("DB"),
-					),
-					Id("err").Op("!=").Nil(),
-				).Block(
-					Return(Nil(), Error()),
-				),
-				Return(Op("&").Id("pager"), Nil()),
-			).Line().Line()}
-		},
-		updateSelectiveByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			updateInputStructName := fmt.Sprintf("Update%sInput", input.entityStructName)
-
-			strct := Null().Type().Id(updateInputStructName).Struct(
-				underscore.Map(input.fields, func(meta fieldMeta) Code {
-					if meta.field.Name == "Id" {
-						return nil
-					}
-					return Null().Id(meta.nameForStructAttribute).Qual(optionalQual, optionalName).Index(meta.typeAsJenCode).Tag(meta.tags)
-				})...,
-			)
-
-			mapWithUpdateData := Id("updates").Op("=").Map(Id("string")).Id("any").Block()
-			resultVar := Id("result").Op("=").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName).Block()
-
-			varDeclarations := Var().Defs(resultVar, mapWithUpdateData)
-
-			optionValidations := underscore.Map(input.fields, func(meta fieldMeta) Code {
-				if meta.field.Name == "Id" {
-					return nil
-				}
-				return If(Id("changes").Dot(meta.nameForStructAttribute).Dot("IsPresent").Call()).Block(
-					Id("updates").
-						Index(Lit(meta.nameForTags)).
-						Op("=").
-						Id("changes").
-						Dot(meta.nameForStructAttribute).
-						Dot("MustGet").
-						Call(),
-				)
-			})
-
-			updateBody := []Code{
-				varDeclarations,
-				Line(),
-			}
-			updateBody = append(updateBody, optionValidations...)
-			updateGormCall := If(
-				Id("res").Op(":=").Id("c").Dot("db").Dot("Model").Call(Id(fmt.Sprintf("&%s", "result"))).Dot("Clauses").Call(Id("clause.Returning{}")).Dot("Where").Call(Lit("id = ?"), Id("id")).Dot("Updates").Call(Id("updates")),
-				Id("res").Dot("Error").Op("!=").Nil(),
-			).Block(
-				Return(Nil(), Id("res").Dot("Error")),
-			)
-			updateBody = append(updateBody,
-				Line(),
-				updateGormCall,
-				Return(Op("&").Id("result"), Nil()),
-			)
-
-			return []Code{
-				strct,
-				Line(),
-				Line(),
-				Commentf("%s can select which field has to be updated from given input", updateSelectiveByIdMethodKey),
-				Line(),
-				fnTargetKeyword.Id(updateSelectiveByIdMethodKey).Params(
-					Id("id").Add(input.idTypeAsJenCode),
-					Id("changes").Id(updateInputStructName),
-				).Params(
-					Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName), Error(),
-				).Block(
-					updateBody...,
-				).Line().Line()}
-		},
-		deleteByIdMethodKey: func(input usefulData, fnTargetKeyword *Statement) []Code {
-			return []Code{fnTargetKeyword.Id(deleteByIdMethodKey).Params(
-				Id("id").Add(input.idTypeAsJenCode),
-			).Params(
-				Error(),
-			).Block(
-				If(
-					Id("res").Op(":=").Id("c").Dot("conn").Dot("Delete").Call(
-						Op("&").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName).Block(),
-						Lit("id = ?"),
-						Id("id"),
-					),
-					Id("res").Dot("Error").Op("!=").Nil(),
-				).Block(
-					Return(Id("res").Dot("Error")),
-				),
-				Return(Nil()),
-			).Line().Line()}
-		},
+		saveMethodKey:                saveMethodGenerator,
+		getByIdMethodKey:             getByIdMethodGenerator,
+		getAllPaginatedMethodKey:     getAllPaginatedMethodGenerator,
+		updateSelectiveByIdMethodKey: updateSelectiveByIdMethodGenerator,
+		deleteByIdMethodKey:          deleteByIdMethodGenerator,
 	}
 )
 
@@ -209,4 +66,157 @@ func generateRepositoryCode(data usefulData) []Code {
 
 	return result
 
+}
+
+func saveMethodGenerator(input usefulData, fnTargetKeyword *Statement) []Code {
+
+	return []Code{
+		Commentf("%s can Create and Update an entity. You can use this for http PATH method. Check https://gorm.io/docs/update.html#Save-All-Fields for more info", saveMethodKey).Line(),
+		fnTargetKeyword.Id(saveMethodKey).Params(
+			Id("input").Op("*").Add(input.entityStructQualifier),
+		).Error().
+			Block(
+				If(
+					Id("res").Op(":=").Id("c").Dot("db").Dot("Save").Call(
+						Id("input"),
+					),
+					Id("res").Dot("Error").Op("!=").Nil(),
+				).Block(
+					Return(Id("res").Dot("Error")),
+				).Line().
+					Return(
+						Nil(),
+					),
+			).Line().Line(),
+	}
+}
+
+func getByIdMethodGenerator(input usefulData, fnTargetKeyword *Statement) []Code {
+	return []Code{fnTargetKeyword.Id(getByIdMethodKey).Params(
+		Id("id").Add(input.idTypeAsJenCode),
+	).Params(
+		Op("*").Add(input.entityStructQualifier),
+		Error(),
+	).Block(
+		Var().Id("found").Add(input.entityStructQualifier),
+		If(
+			Id("res").Op(":=").Id("c").Dot("db").Dot("First").Call(
+				Op("&").Id("found"),
+				Id("id"),
+			),
+			Id("res").Dot("Error").Op("!=").Nil(),
+		).Block(
+			Return(Nil(), Id("res").Dot("Error")),
+		),
+		Return(Op("&").Id("found"), Nil()),
+	).Line().Line()}
+}
+
+func getAllPaginatedMethodGenerator(input usefulData, fnTargetKeyword *Statement) []Code {
+	return []Code{fnTargetKeyword.Id(getAllPaginatedMethodKey).Params(
+		Id("pageNumber").Op(",").Id("pageSize").Int(),
+	).Params(
+		Op("*").Qual("github.com/manicar2093/gormpager", "Page").Index(input.entityStructQualifier),
+		Error(),
+	).Block(
+		Id("pager").Op(":=").Qual("github.com/manicar2093/gormpager", "Page").Index(input.entityStructQualifier).Values(
+			Id("PageSize").Op(":").Int64().Call(Id("pageSize")),
+			Id("CurrentPage").Op(":").Int64().Call(Id("pageNumber")),
+		),
+		If(
+			Id("err").Op(":=").Id("pager").Dot("SelectPages").Call(
+				Id("c").Dot("conn").Dot("GormPager"),
+				Id("c").Dot("conn").Dot("DB"),
+			),
+			Id("err").Op("!=").Nil(),
+		).Block(
+			Return(Nil(), Error()),
+		),
+		Return(Op("&").Id("pager"), Nil()),
+	).Line().Line()}
+}
+
+func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *Statement) []Code {
+	updateInputStructName := fmt.Sprintf("Update%sInput", input.entityStructName)
+
+	strct := Null().Type().Id(updateInputStructName).Struct(
+		underscore.Map(input.fields, func(meta fieldMeta) Code {
+			if meta.field.Name == "Id" {
+				return nil
+			}
+			return Null().Id(meta.nameForStructAttribute).Qual(optionalQual, optionalName).Index(meta.typeAsJenCode).Tag(meta.tags)
+		})...,
+	)
+
+	mapWithUpdateData := Id("updates").Op("=").Map(Id("string")).Id("any").Block()
+	resultVar := Id("result").Op("=").Add(input.entityStructQualifier).Block()
+
+	varDeclarations := Var().Defs(resultVar, mapWithUpdateData)
+
+	optionValidations := underscore.Map(input.fields, func(meta fieldMeta) Code {
+		if meta.field.Name == "Id" {
+			return nil
+		}
+		return If(Id("changes").Dot(meta.nameForStructAttribute).Dot("IsPresent").Call()).Block(
+			Id("updates").
+				Index(Lit(meta.nameForTags)).
+				Op("=").
+				Id("changes").
+				Dot(meta.nameForStructAttribute).
+				Dot("MustGet").
+				Call(),
+		)
+	})
+
+	updateBody := []Code{
+		varDeclarations,
+		Line(),
+	}
+	updateBody = append(updateBody, optionValidations...)
+	updateGormCall := If(
+		Id("res").Op(":=").Id("c").Dot("db").Dot("Model").Call(Id(fmt.Sprintf("&%s", "result"))).Dot("Clauses").Call(Id("clause.Returning{}")).Dot("Where").Call(Lit("id = ?"), Id("id")).Dot("Updates").Call(Id("updates")),
+		Id("res").Dot("Error").Op("!=").Nil(),
+	).Block(
+		Return(Nil(), Id("res").Dot("Error")),
+	)
+	updateBody = append(updateBody,
+		Line(),
+		updateGormCall,
+		Return(Op("&").Id("result"), Nil()),
+	)
+
+	return []Code{
+		strct,
+		Line(),
+		Line(),
+		Commentf("%s can select which field has to be updated from given input", updateSelectiveByIdMethodKey),
+		Line(),
+		fnTargetKeyword.Id(updateSelectiveByIdMethodKey).Params(
+			Id("id").Add(input.idTypeAsJenCode),
+			Id("changes").Id(updateInputStructName),
+		).Params(
+			Op("*").Qual(fmt.Sprintf("%s/%s", input.moduleName, input.entitiesKey), input.entityStructName), Error(),
+		).Block(
+			updateBody...,
+		).Line().Line()}
+}
+
+func deleteByIdMethodGenerator(input usefulData, fnTargetKeyword *Statement) []Code {
+	return []Code{fnTargetKeyword.Id(deleteByIdMethodKey).Params(
+		Id("id").Add(input.idTypeAsJenCode),
+	).Params(
+		Error(),
+	).Block(
+		If(
+			Id("res").Op(":=").Id("c").Dot("conn").Dot("Delete").Call(
+				Op("&").Add(input.entityStructQualifier).Block(),
+				Lit("id = ?"),
+				Id("id"),
+			),
+			Id("res").Dot("Error").Op("!=").Nil(),
+		).Block(
+			Return(Id("res").Dot("Error")),
+		),
+		Return(Nil()),
+	).Line().Line()}
 }
