@@ -113,14 +113,14 @@ func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement
 		nameForStructAttribute := strcase.ToCamel(f.Name)
 		nameForFunctionParams := strcase.ToLowerCamel(f.Name)
 		if f.Name == "Id" {
-			idType = getType(idField, nameForStructAttribute)
+			idType = getType(idField)
 		}
 
 		return fieldMeta{
 			nameForTags:            strcase.ToSnake(f.Name),
 			nameForStructAttribute: nameForStructAttribute,
 			nameForFunctionParams:  nameForFunctionParams,
-			typeAsJenCode:          getType(f, nameForStructAttribute),
+			typeAsJenCode:          getType(f),
 			field:                  f,
 			tags:                   getFieldTags(f),
 		}
@@ -140,7 +140,7 @@ func createIdField(input CreateEntityInput) EntityField {
 	}
 }
 
-func getType(f EntityField, nameForStructAttribute string) *Statement {
+func getType(f EntityField) *Statement {
 	switch f.Type {
 	case "decimal":
 		return Qual("github.com/quagmt/udecimal", "Decimal")
