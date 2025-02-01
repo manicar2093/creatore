@@ -139,7 +139,8 @@ func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *State
 	strct := Null().Type().Id(updateInputStructName).Struct(
 		underscore.Map(input.fields, func(meta fieldMeta) Code {
 			if meta.field.Name == "Id" {
-				return nil
+				// TODO: create a new way to generate tags
+				return Null().Id(meta.nameForStructAttribute).Add(meta.typeAsJenCode).Tag(map[string]string{"json": "id", "validate": "required|required_uuid"})
 			}
 			return Null().Id(meta.nameForStructAttribute).Qual(optionalQual, optionalName).Index(meta.typeAsJenCode).Tag(meta.tags)
 		})...,
@@ -171,7 +172,7 @@ func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *State
 	}
 	updateBody = append(updateBody, optionValidations...)
 	updateGormCall := If(
-		Id("res").Op(":=").Id("c").Dot("db").Dot("Model").Call(Id(fmt.Sprintf("&%s", "result"))).Dot("Clauses").Call(Id("clause.Returning{}")).Dot("Where").Call(Lit("id = ?"), Id("id")).Dot("Updates").Call(Id("updates")),
+		Id("res").Op(":=").Id("c").Dot("db").Dot("Model").Call(Id(fmt.Sprintf("&%s", "result"))).Dot("Clauses").Call(Id("clause.Returning{}")).Dot("Where").Call(Lit("id = ?"), Id("changes").Dot("Id")).Dot("Updates").Call(Id("updates")),
 		Id("res").Dot("Error").Op("!=").Nil(),
 	).Block(
 		Return(Nil(), Id("res").Dot("Error")),
@@ -190,7 +191,6 @@ func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *State
 		Add(fnTargetKeyword).
 		Id(updateSelectiveByIdMethodKey).
 		Params(
-			Id("id").Add(input.idTypeAsJenCode),
 			Id("changes").Id(updateInputStructName),
 		).Params(
 		Op("*").Add(input.modelStructQualifier), Error(),
