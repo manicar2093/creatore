@@ -8,6 +8,8 @@ import (
 
 const (
 	ctxKeyword = "ctx"
+	reqKeyword = "req"
+	resKeyword = "res"
 )
 
 func createControllerFile(data usefulData) error {
@@ -31,7 +33,10 @@ func generateControllerCode(input usefulData) Code {
 		Add(generateControllerSaveMethod(input)).
 		Line().
 		Line().
-		Add(generateControllerGetById(input))
+		Add(generateControllerGetById(input)).
+		Line().
+		Line().
+		Add(generateControllerGetAllPaginatedMethods(input))
 }
 
 func generateControllerStruct(input usefulData) Code {
@@ -74,10 +79,10 @@ func generateControllerSaveMethod(input usefulData) Code {
 			Error(),
 		).
 		Block(
-			Var().Id("req").Op("=").Add(input.modelStructQualifier).Values(),
+			Var().Id(reqKeyword).Op("=").Add(input.modelStructQualifier).Values(),
 			If(
 				Err().Op(":=").Id("ctx").Dot("Bind").Call(
-					Op("&").Id("req"),
+					Op("&").Id(reqKeyword),
 				),
 				Err().Op("!=").Nil(),
 			).
@@ -86,7 +91,7 @@ func generateControllerSaveMethod(input usefulData) Code {
 				).Line(),
 			If(
 				Err().Op(":=").Id(ctxKeyword).Dot("Validate").Call(
-					Op("&").Id("req"),
+					Op("&").Id(reqKeyword),
 				),
 				Err().Op("!=").Nil(),
 			).
@@ -95,14 +100,14 @@ func generateControllerSaveMethod(input usefulData) Code {
 				).Line(),
 			If(
 				Err().Op(":=").Id(input.receiverVarName).Dot(input.repositoryStructVarName).Dot(saveMethodKey).Call(
-					Op("&").Id("req"),
+					Op("&").Id(reqKeyword),
 				),
 				Err().Op("!=").Nil(),
 			).Block(
 				Return(Err()),
 			),
 			Return(
-				Id(ctxKeyword).Dot("JSON").Call(Qual("http", "StatusCreated"), Op("&").Id("req")),
+				Id(ctxKeyword).Dot("JSON").Call(Qual("http", "StatusCreated"), Op("&").Id(reqKeyword)),
 			),
 		)
 }
@@ -134,9 +139,9 @@ func generateControllerGetById(input usefulData) Code {
 		Params(echoContextParam()).
 		Error().
 		Block(
-			Id("req").Op(":=").Id(inputStructName).Values(),
+			Id(reqKeyword).Op(":=").Id(inputStructName).Values(),
 			If(
-				Err().Op(":=").Id("ctx").Dot("Bind").Call(Op("&").Id("req")),
+				Err().Op(":=").Id("ctx").Dot("Bind").Call(Op("&").Id(reqKeyword)),
 				Err().Op("!=").Nil(),
 			).
 				Block(
@@ -145,28 +150,54 @@ func generateControllerGetById(input usefulData) Code {
 					),
 				),
 			If(
-				Err().Op(":=").Id(ctxKeyword).Dot("Validate").Call(Op("&").Id("req")),
+				Err().Op(":=").Id(ctxKeyword).Dot("Validate").Call(Op("&").Id(reqKeyword)),
 				Err().Op("!=").Nil(),
 			).Block(
 				Return(Err()),
 			),
 			Line(),
-			List(Id("res"), Err()).Op(":=").Id(input.receiverVarName).Dot(input.repositoryStructVarName).Dot(getByIdMethodKey).Call(
-				Id("req").Dot("Id"),
+			List(Id(resKeyword), Err()).Op(":=").Id(input.receiverVarName).Dot(input.repositoryStructVarName).Dot(getByIdMethodKey).Call(
+				Id(reqKeyword).Dot("Id"),
 			),
 			If(Err().Op("!=").Nil()).Block(
 				Return(Err()),
 			),
 			Line(),
 			Return(
-				Id(ctxKeyword).Dot("JSON").Call(Qual("http", "StatusOK"), Op("&").Id("res")),
+				Id(ctxKeyword).Dot("JSON").Call(Qual("http", "StatusOK"), Op("&").Id(resKeyword)),
 			),
 		)
 }
 
 func generateControllerGetAllPaginatedMethods(input usefulData) Code {
-	return Null()
-
+	return Func().
+		Params(controllerReceiverParam(input)).
+		Id(handlerMethodName(getAllPaginatedMethodKey)).
+		Params(echoContextParam()).
+		Error().
+		Block(
+			Id(reqKeyword).Op(":=").Qual(winterRequestsQual, winterRequestsPageData).Values(),
+			If(
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
+				Err().Op("!=").Nil(),
+			).Block(
+				Return(Err()),
+			),
+			Line(),
+			List(Id(resKeyword), Err()).Op(":=").Id(input.receiverVarName).Dot(input.repositoryStructVarName).Dot(getAllPaginatedMethodKey).Call(
+				Id(reqKeyword).Dot("PageNumber"), Id(reqKeyword).Dot("PageSize"),
+			),
+			If(Err().Op("!=").Nil()).Block(
+				Return(Err()),
+			),
+			Line(),
+			Return(
+				Id(ctxKeyword).Dot("JSON").Call(
+					Qual("http", "StatusOK"),
+					Op("&").Id(resKeyword),
+				),
+			),
+		)
 }
 
 func handlerMethodName(name string) string {
