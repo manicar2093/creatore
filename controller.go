@@ -119,23 +119,11 @@ func generateControllerSaveMethod(input usefulData) Code {
 		Block(
 			Var().Id(reqKeyword).Op("=").Add(input.modelStructQualifier).Values(),
 			If(
-				Err().Op(":=").Id("ctx").Dot("Bind").Call(
-					Op("&").Id(reqKeyword),
-				),
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
 				Err().Op("!=").Nil(),
-			).
-				Block(
-					Return(Err()),
-				).Line(),
-			If(
-				Err().Op(":=").Id(ctxKeyword).Dot("Validate").Call(
-					Op("&").Id(reqKeyword),
-				),
-				Err().Op("!=").Nil(),
-			).
-				Block(
-					Return(Err()),
-				).Line(),
+			).Block(
+				Return(Err()),
+			).Line(),
 			If(
 				Err().Op(":=").Id(input.receiverVarName).Dot(input.repositoryStructVarName).Dot(saveMethodKey).Call(
 					Op("&").Id(reqKeyword),
@@ -179,16 +167,7 @@ func generateControllerGetById(input usefulData) Code {
 		Block(
 			Id(reqKeyword).Op(":=").Id(inputStructName).Values(),
 			If(
-				Err().Op(":=").Id("ctx").Dot("Bind").Call(Op("&").Id(reqKeyword)),
-				Err().Op("!=").Nil(),
-			).
-				Block(
-					Return(
-						Err(),
-					),
-				),
-			If(
-				Err().Op(":=").Id(ctxKeyword).Dot("Validate").Call(Op("&").Id(reqKeyword)),
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
 				Err().Op("!=").Nil(),
 			).Block(
 				Return(Err()),
