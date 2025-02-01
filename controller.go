@@ -152,7 +152,7 @@ func generateControllerGetById(input usefulData) Code {
 				Tag(map[string]string{
 					"param":    "id",
 					"json":     "id",
-					"validate": "required required_uuid",
+					"validate": ternary.If(input.isIdUUID, "required_uuid", "required"),
 				}),
 		).
 		Line().
