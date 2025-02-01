@@ -31,6 +31,9 @@ func generateControllerCode(input usefulData) Code {
 		Add(generateControllerConstructor(input)).
 		Line().
 		Line().
+		Add(routesRegistryMethod(input)).
+		Line().
+		Line().
 		Add(generateControllerSaveMethod(input)).
 		Line().
 		Line().
@@ -44,6 +47,34 @@ func generateControllerCode(input usefulData) Code {
 		Line().
 		Line().
 		Add(generateControllerDeleteByIdMethod(input))
+}
+
+func routesRegistryMethod(input usefulData) Code {
+	groupVar := fmt.Sprintf("%sGroup", input.modelServicePackageName)
+	baseRoute := fmt.Sprintf("/%s", input.modelServicePackageName)
+	byIdRoute := fmt.Sprintf("%s/:id", baseRoute)
+
+	return Func().
+		Params(controllerReceiverParam(input)).
+		Id("SetUpRoutes").
+		Params(
+			Id("group").Op("*").Qual("github.com/labstack/echo/v4", "Group"),
+		).Block(
+		Id(groupVar).
+			Op(":=").
+			Id("group").
+			Dot("Group").
+			Call(
+				Lit(baseRoute),
+			),
+		Line(),
+		Id(groupVar).Dot("GET").Call(Lit(baseRoute), Id(handlerMethodName(getAllPaginatedMethodKey))),
+		Id(groupVar).Dot("POST").Call(Lit(baseRoute), Id(handlerMethodName(saveMethodKey))),
+		Id(groupVar).Dot("GET").Call(Lit(byIdRoute), Id(handlerMethodName(getByIdMethodKey))),
+		Id(groupVar).Dot("PATCH").Call(Lit(byIdRoute), Id(handlerMethodName(saveMethodKey))),
+		Id(groupVar).Dot("PUT").Call(Lit(byIdRoute), Id(handlerMethodName(updateSelectiveByIdMethodKey))),
+		Id(groupVar).Dot("DELETE").Call(Lit(byIdRoute), Id(handlerMethodName(deleteByIdMethodKey))),
+	)
 }
 
 func generateControllerStruct(input usefulData) Code {
