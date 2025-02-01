@@ -1,8 +1,13 @@
 package main
 
 import (
+	"fmt"
 	. "github.com/dave/jennifer/jen"
 	"os"
+)
+
+const (
+	ctxKeyword = "ctx"
 )
 
 func createControllerFile(data usefulData) error {
@@ -17,14 +22,29 @@ func createControllerFile(data usefulData) error {
 
 func generateControllerCode(input usefulData) Code {
 	return Null().
+		Add(generateControllerStruct(input)).
+		Line().
+		Line().
+		Add(generateControllerConstructor(input)).
+		Line().
+		Line().
+		Add(generateControllerSaveMethod(input)).
+		Line().
+		Line().
+		Add(generateControllerGetById(input))
+}
+
+func generateControllerStruct(input usefulData) Code {
+	return Null().
 		Type().
 		Id(input.controllerStructName).
 		Struct(
 			Id(input.repositoryStructVarName).Op("*").Qual(input.modelServicePackageName, input.repositoryStructName),
-		).
-		Line().
-		Line().
-		Func().
+		)
+}
+
+func generateControllerConstructor(input usefulData) Code {
+	return Func().
 		Id(input.controllerStructConstructorName).
 		Params(
 			Id(input.repositoryStructVarName).Op("*").Qual(input.modelServicePackageName, input.repositoryStructName),
@@ -38,14 +58,17 @@ func generateControllerCode(input usefulData) Code {
 					},
 				),
 			),
-		).Line().Line().
-		Func().
+		)
+}
+
+func generateControllerSaveMethod(input usefulData) Code {
+	return Func().
 		Params(
-			Id(input.receiverVarName).Op("*").Id(input.controllerStructName),
+			controllerReceiverParam(input),
 		).
-		Id(saveMethodKey).
+		Id(handlerMethodName(saveMethodKey)).
 		Params(
-			Id("ctx").Qual("github.com/labstack/echo/v4", "Context"),
+			echoContextParam(),
 		).
 		Params(
 			Error(),
@@ -62,7 +85,7 @@ func generateControllerCode(input usefulData) Code {
 					Return(Err()),
 				).Line(),
 			If(
-				Err().Op(":=").Id("ctx").Dot("Validate").Call(
+				Err().Op(":=").Id(ctxKeyword).Dot("Validate").Call(
 					Op("&").Id("req"),
 				),
 				Err().Op("!=").Nil(),
@@ -79,8 +102,81 @@ func generateControllerCode(input usefulData) Code {
 				Return(Err()),
 			),
 			Return(
-				Id("ctx").Dot("JSON").Call(Qual("http", "StatusCreated"), Op("&").Id("req")),
+				Id(ctxKeyword).Dot("JSON").Call(Qual("http", "StatusCreated"), Op("&").Id("req")),
 			),
 		)
+}
 
+func generateControllerGetById(input usefulData) Code {
+	var (
+		methodName      = fmt.Sprintf("Get%sById", input.modelStructName)
+		inputStructName = fmt.Sprintf("%sInput", methodName)
+	)
+
+	return Type().
+		Id(inputStructName).
+		Struct(
+			Id("Id").
+				Add(input.idTypeAsJenCode).
+				Tag(map[string]string{
+					"param":    "id",
+					"json":     "id",
+					"validate": "required required_uuid",
+				}),
+		).
+		Line().
+		Line().
+		Func().
+		Params(
+			controllerReceiverParam(input),
+		).
+		Id(handlerMethodName(methodName)).
+		Params(echoContextParam()).
+		Error().
+		Block(
+			Id("req").Op(":=").Id(inputStructName).Values(),
+			If(
+				Err().Op(":=").Id("ctx").Dot("Bind").Call(Op("&").Id("req")),
+				Err().Op("!=").Nil(),
+			).
+				Block(
+					Return(
+						Err(),
+					),
+				),
+			If(
+				Err().Op(":=").Id(ctxKeyword).Dot("Validate").Call(Op("&").Id("req")),
+				Err().Op("!=").Nil(),
+			).Block(
+				Return(Err()),
+			),
+			Line(),
+			List(Id("res"), Err()).Op(":=").Id(input.receiverVarName).Dot(input.repositoryStructVarName).Dot(getByIdMethodKey).Call(
+				Id("req").Dot("Id"),
+			),
+			If(Err().Op("!=").Nil()).Block(
+				Return(Err()),
+			),
+			Line(),
+			Return(
+				Id(ctxKeyword).Dot("JSON").Call(Qual("http", "StatusOK"), Op("&").Id("res")),
+			),
+		)
+}
+
+func generateControllerGetAllPaginatedMethods(input usefulData) Code {
+	return Null()
+
+}
+
+func handlerMethodName(name string) string {
+	return fmt.Sprintf("%sHandler", name)
+}
+
+func echoContextParam() Code {
+	return Id(ctxKeyword).Qual("github.com/labstack/echo/v4", "Context")
+}
+
+func controllerReceiverParam(input usefulData) Code {
+	return Id(input.receiverVarName).Op("*").Id(input.controllerStructName)
 }
