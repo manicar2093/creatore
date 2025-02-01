@@ -5,7 +5,7 @@ const (
 	optionalName                     = "Optional"
 	winterConnectionsQual            = "github.com/manicar2093/winter/connections"
 	winterConnectionsConnWrapperQual = "ConnWrapper"
-	winterRequestsQual               = "github.com/manicar2093/winter/commonreq"
+	winterCommonReqQual              = "github.com/manicar2093/winter/commonreq"
 	winterRequestsPageData           = "PageData"
 	winterQual                       = "github.com/manicar2093/winter"
 	winterBindAndValidate            = "BindAndValidate"

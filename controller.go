@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	. "github.com/dave/jennifer/jen"
+	"github.com/julien040/go-ternary"
 	"os"
 )
 
@@ -39,7 +40,10 @@ func generateControllerCode(input usefulData) Code {
 		Add(generateControllerGetAllPaginatedMethods(input)).
 		Line().
 		Line().
-		Add(generateControllerUpdateSelectiveMethod(input))
+		Add(generateControllerUpdateSelectiveMethod(input)).
+		Line().
+		Line().
+		Add(generateControllerDeleteByIdMethod(input))
 }
 
 func generateControllerStruct(input usefulData) Code {
@@ -179,7 +183,7 @@ func generateControllerGetAllPaginatedMethods(input usefulData) Code {
 		Params(echoContextParam()).
 		Error().
 		Block(
-			Id(reqKeyword).Op(":=").Qual(winterRequestsQual, winterRequestsPageData).Values(),
+			Id(reqKeyword).Op(":=").Qual(winterCommonReqQual, winterRequestsPageData).Values(),
 			If(
 				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
 				Err().Op("!=").Nil(),
@@ -226,6 +230,36 @@ func generateControllerUpdateSelectiveMethod(input usefulData) Code {
 				Id(ctxKeyword).Dot("JSON").Call(
 					Qual(netHttpQual, "StatusOK"),
 					Op("&").Id(resKeyword),
+				),
+			),
+		)
+}
+
+func generateControllerDeleteByIdMethod(input usefulData) Code {
+	return Func().
+		Params(controllerReceiverParam(input)).
+		Id(handlerMethodName(deleteByIdMethodKey)).
+		Params(echoContextParam()).
+		Error().
+		Block(
+			Id(reqKeyword).Op(":=").Qual(winterCommonReqQual, ternary.If(input.isIdUUID, "GetByIdUUID", "GetById")).Values(),
+			If(
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
+				Err().Op("!=").Nil(),
+			).Block(
+				Return(Err()),
+			),
+			If(
+				Err().Op(":=").Id(ctxKeyword).Dot(input.repositoryStructVarName).Dot(deleteByIdMethodKey).Call(
+					Id(reqKeyword).Dot("Id"),
+				),
+				Err().Op("!=").Nil(),
+			).Block(
+				Return(Err()),
+			),
+			Return(
+				Id(ctxKeyword).Dot("NoContent").Call(
+					Qual(netHttpQual, "StatusOK"),
 				),
 			),
 		)

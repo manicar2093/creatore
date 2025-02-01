@@ -30,17 +30,8 @@ type structNames struct {
 	updateSelectiveByIdInputStructName string
 }
 
-type reposMethodsNames struct {
-	saveMethodKey                string
-	getByIdMethodKey             string
-	getAllPaginatedMethodKey     string
-	updateSelectiveByIdMethodKey string
-	deleteByIdMethodKey          string
-}
-
 type usefulData struct {
 	structNames
-	reposMethodsNames
 	// modelsKey contains literal "entities"
 	modelsKey string
 	// fields contains all fields with useful data
@@ -49,6 +40,8 @@ type usefulData struct {
 	idTypeAsJenCode *Statement
 	// modelStructQualifier contains the quealifier code for entity
 	modelStructQualifier *Statement
+	// isIdUUID indicates if id is type UUID. If false is considered id is an int
+	isIdUUID bool
 }
 
 func createUsefulData(input CreateEntityInput) usefulData {
@@ -65,7 +58,7 @@ func createUsefulData(input CreateEntityInput) usefulData {
 		modelServicePackageName         = strcase.ToSnake(entityNameAsPlural)
 		modelsKey                       = "models"
 		modelStructName                 = strcase.ToCamel(input.EntityName)
-		fieldsMeta, idType              = normalizeEntityFieldsData(input)
+		fieldsMeta, idType, idIsUUID    = normalizeEntityFieldsData(input)
 		moduleName                      = "github.com/user/package"
 	)
 
@@ -82,17 +75,10 @@ func createUsefulData(input CreateEntityInput) usefulData {
 			receiverVarName:                    "c",
 			updateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
 		},
-		// FIXME: NOT USED BY NOW :/ I don't even know if it is useful
-		reposMethodsNames: reposMethodsNames{
-			saveMethodKey:                "Save",
-			getByIdMethodKey:             "GetById",
-			getAllPaginatedMethodKey:     "GetAllPaginated",
-			updateSelectiveByIdMethodKey: "UpdateSelectiveById",
-			deleteByIdMethodKey:          "DeleteById",
-		},
 		modelsKey:            modelsKey,
 		fields:               fieldsMeta,
 		idTypeAsJenCode:      idType,
+		isIdUUID:             idIsUUID,
 		modelStructQualifier: Qual(fmt.Sprintf("%s/%s", moduleName, modelsKey), modelStructName),
 	}
 }
@@ -106,8 +92,8 @@ type fieldMeta struct {
 	tags                   map[string]string
 }
 
-func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement) {
-	idField := createIdField(input)
+func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement, bool) {
+	idField, isUUID := createIdField(input)
 	input.Fields = append([]EntityField{idField}, input.Fields...)
 	var idType *Statement
 
@@ -126,20 +112,20 @@ func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement
 			field:                  f,
 			tags:                   getFieldTags(f),
 		}
-	}), idType
+	}), idType, isUUID
 }
 
-func createIdField(input CreateEntityInput) EntityField {
+func createIdField(input CreateEntityInput) (EntityField, bool) {
 	if input.IsUuid {
 		return EntityField{
 			Name: idKey,
 			Type: "uuid",
-		}
+		}, true
 	}
 	return EntityField{
 		Name: idKey,
 		Type: "uint",
-	}
+	}, false
 }
 
 func getType(f EntityField) *Statement {
