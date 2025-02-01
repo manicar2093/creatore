@@ -11,4 +11,5 @@ const (
 	winterBindAndValidate            = "BindAndValidate"
 	gormppagerQual                   = "github.com/manicar2093/gormpager"
 	gormppagerPageQual               = "Page"
+	netHttpQual                      = "net/http"
 )

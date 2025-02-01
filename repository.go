@@ -134,9 +134,7 @@ func getAllPaginatedMethodGenerator(input usefulData, fnTargetKeyword *Statement
 }
 
 func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *Statement) Code {
-	updateInputStructName := fmt.Sprintf("Update%sInput", input.modelStructName)
-
-	strct := Null().Type().Id(updateInputStructName).Struct(
+	strct := Null().Type().Id(input.updateSelectiveByIdInputStructName).Struct(
 		underscore.Map(input.fields, func(meta fieldMeta) Code {
 			if meta.field.Name == "Id" {
 				// TODO: create a new way to generate tags
@@ -191,7 +189,7 @@ func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *State
 		Add(fnTargetKeyword).
 		Id(updateSelectiveByIdMethodKey).
 		Params(
-			Id("changes").Id(updateInputStructName),
+			Id("changes").Id(input.updateSelectiveByIdInputStructName),
 		).Params(
 		Op("*").Add(input.modelStructQualifier), Error(),
 	).Block(

@@ -26,7 +26,8 @@ type structNames struct {
 	// controllerStructConstructorName contains the name for controller constructor
 	controllerStructConstructorName string
 	// receiverVarName contains the name of receiver var name for struct methods
-	receiverVarName string
+	receiverVarName                    string
+	updateSelectiveByIdInputStructName string
 }
 
 type reposMethodsNames struct {
@@ -70,15 +71,16 @@ func createUsefulData(input CreateEntityInput) usefulData {
 
 	return usefulData{
 		structNames: structNames{
-			repositoryStructName:            repositoryStructName,
-			repositoryStructConstructorName: repositoryStructConstructorName,
-			repositoryStructVarName:         repositoryStructVarName,
-			modelServicePackageName:         modelServicePackageName,
-			modelStructName:                 modelStructName,
-			moduleName:                      moduleName, // TODO: This must be configurable
-			controllerStructName:            controllerStructName,
-			controllerStructConstructorName: controllerStructConstructorName,
-			receiverVarName:                 "c",
+			repositoryStructName:               repositoryStructName,
+			repositoryStructConstructorName:    repositoryStructConstructorName,
+			repositoryStructVarName:            repositoryStructVarName,
+			modelServicePackageName:            modelServicePackageName,
+			modelStructName:                    modelStructName,
+			moduleName:                         moduleName, // TODO: This must be configurable
+			controllerStructName:               controllerStructName,
+			controllerStructConstructorName:    controllerStructConstructorName,
+			receiverVarName:                    "c",
+			updateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
 		},
 		// FIXME: NOT USED BY NOW :/ I don't even know if it is useful
 		reposMethodsNames: reposMethodsNames{
