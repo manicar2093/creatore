@@ -68,12 +68,12 @@ func routesRegistryMethod(input usefulData) Code {
 				Lit(baseRoute),
 			),
 		Line(),
-		Id(groupVar).Dot("GET").Call(Lit(baseRoute), Id(handlerMethodName(getAllPaginatedMethodKey))),
-		Id(groupVar).Dot("POST").Call(Lit(baseRoute), Id(handlerMethodName(saveMethodKey))),
-		Id(groupVar).Dot("GET").Call(Lit(byIdRoute), Id(handlerMethodName(getByIdMethodKey))),
-		Id(groupVar).Dot("PATCH").Call(Lit(byIdRoute), Id(handlerMethodName(saveMethodKey))),
-		Id(groupVar).Dot("PUT").Call(Lit(byIdRoute), Id(handlerMethodName(updateSelectiveByIdMethodKey))),
-		Id(groupVar).Dot("DELETE").Call(Lit(byIdRoute), Id(handlerMethodName(deleteByIdMethodKey))),
+		Id(groupVar).Dot("GET").Call(Lit(baseRoute), Id(input.receiverVarName).Dot(handlerMethodName(getAllPaginatedMethodKey))),
+		Id(groupVar).Dot("POST").Call(Lit(baseRoute), Id(input.receiverVarName).Dot(handlerMethodName(saveMethodKey))),
+		Id(groupVar).Dot("GET").Call(Lit(byIdRoute), Id(input.receiverVarName).Dot(handlerMethodName(getByIdMethodKey))),
+		Id(groupVar).Dot("PATCH").Call(Lit(byIdRoute), Id(input.receiverVarName).Dot(handlerMethodName(saveMethodKey))),
+		Id(groupVar).Dot("PUT").Call(Lit(byIdRoute), Id(input.receiverVarName).Dot(handlerMethodName(updateSelectiveByIdMethodKey))),
+		Id(groupVar).Dot("DELETE").Call(Lit(byIdRoute), Id(input.receiverVarName).Dot(handlerMethodName(deleteByIdMethodKey))),
 	)
 }
 
@@ -132,6 +132,7 @@ func generateControllerSaveMethod(input usefulData) Code {
 			).Block(
 				Return(Err()),
 			),
+			Line(),
 			Return(
 				Id(ctxKeyword).Dot("JSON").Call(Qual(netHttpQual, "StatusCreated"), Op("&").Id(reqKeyword)),
 			),
@@ -139,33 +140,15 @@ func generateControllerSaveMethod(input usefulData) Code {
 }
 
 func generateControllerGetById(input usefulData) Code {
-	var (
-		methodName      = fmt.Sprintf("Get%sById", input.modelStructName)
-		inputStructName = fmt.Sprintf("%sInput", methodName)
-	)
-
-	return Type().
-		Id(inputStructName).
-		Struct(
-			Id("Id").
-				Add(input.idTypeAsJenCode).
-				Tag(map[string]string{
-					"param":    "id",
-					"json":     "id",
-					"validate": ternary.If(input.isIdUUID, "required_uuid", "required"),
-				}),
-		).
-		Line().
-		Line().
-		Func().
+	return Func().
 		Params(
 			controllerReceiverParam(input),
 		).
-		Id(handlerMethodName(methodName)).
+		Id(handlerMethodName(getByIdMethodKey)).
 		Params(echoContextParam()).
 		Error().
 		Block(
-			Id(reqKeyword).Op(":=").Id(inputStructName).Values(),
+			Id(reqKeyword).Op(":=").Qual(winterCommonReqQual, ternary.If(input.isIdUUID, "GetByIdUUID", "GetById")).Values(),
 			If(
 				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
 				Err().Op("!=").Nil(),
@@ -267,6 +250,7 @@ func generateControllerDeleteByIdMethod(input usefulData) Code {
 			).Block(
 				Return(Err()),
 			),
+			Line(),
 			Return(
 				Id(ctxKeyword).Dot("NoContent").Call(
 					Qual(netHttpQual, "StatusOK"),
