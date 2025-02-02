@@ -1,3 +1,10 @@
+## v0.2.0 (2025-02-02)
+
+### Feat
+
+- add mod detection, error handling, bettet logs and new utils for dir and files names
+- add log, commands and fixes
+
 ## v0.1.0 (2025-02-02)
 
 ### Feat
