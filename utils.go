@@ -31,8 +31,24 @@ type structNames struct {
 	updateSelectiveByIdInputStructName string
 }
 
+type dirNames struct {
+	// baseModelDir is the directory creatore is looking to save the new model file domain/models/
+	baseModelDir string
+	// internalBaseDir is where creatore will create the new package for the new model internal/
+	internalBaseDir string
+	// serviceDir is the path of the new package internal/<model_name>/
+	serviceDir string
+	// modelFile is the path of the file where the model will be saved
+	modelFile string
+	// controllerFile is the path where controller will be saved
+	controllerFile string
+	// repositoryFile is the path where repository will be saved
+	repositoryFile string
+}
+
 type usefulData struct {
 	structNames
+	dirNames
 	// modelsKey contains literal "models"
 	modelsKey string
 	// fields contains all fields with useful data
@@ -45,7 +61,7 @@ type usefulData struct {
 	isIdUUID bool
 }
 
-func createUsefulData(input ModelCreationInput) usefulData {
+func createUsefulData(input ModelCreationInput, goModName string) usefulData {
 	log.Info("Creating data to generate code...")
 	var (
 		pc = pluralize.NewClient()
@@ -61,7 +77,6 @@ func createUsefulData(input ModelCreationInput) usefulData {
 		modelsKey                       = "models"
 		modelStructName                 = strcase.ToCamel(input.EntityName)
 		fieldsMeta, idType, idIsUUID    = normalizeEntityFieldsData(input)
-		goModName                       = "github.com/user/package"
 	)
 
 	return usefulData{
@@ -71,11 +86,19 @@ func createUsefulData(input ModelCreationInput) usefulData {
 			repositoryStructVarName:            repositoryStructVarName,
 			modelServicePackageName:            modelServicePackageName,
 			modelStructName:                    modelStructName,
-			goModName:                          goModName, // TODO: This must be configurable
+			goModName:                          goModName,
 			controllerStructName:               controllerStructName,
 			controllerStructConstructorName:    controllerStructConstructorName,
 			receiverVarName:                    "c",
 			updateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
+		},
+		dirNames: dirNames{
+			baseModelDir:    "domain/models",
+			internalBaseDir: "internal/",
+			serviceDir:      fmt.Sprintf("internal/%s", modelServicePackageName),
+			modelFile:       fmt.Sprintf("domain/models/%s_creatore.go", modelServicePackageName),
+			controllerFile:  fmt.Sprintf("internal/%s/controller_creatore.go", modelServicePackageName),
+			repositoryFile:  fmt.Sprintf("internal/%s/repository_creatore.go", modelServicePackageName),
 		},
 		modelsKey:            modelsKey,
 		fields:               fieldsMeta,

@@ -1,9 +1,10 @@
 package main
 
 import (
-	"fmt"
+	"errors"
 	"github.com/charmbracelet/log"
 	"github.com/rjNemo/underscore"
+	"golang.org/x/mod/modfile"
 	"os"
 	"strings"
 	"time"
@@ -17,16 +18,14 @@ func main() {
 	genCmd.Flags().BoolVarP(&binaryId, "binary-id", "", false, "indicates if model has a UUID as id. If omitted Id will be an int")
 
 	configLogger()
-	if err := rootCmd.Execute(); err != nil {
-		log.Fatal(err)
-	}
+	rootCmd.Execute()
 }
 
 func normalizeArgsAsEntityInput(args []string, isBinaryId bool) ModelCreationInput {
 	return ModelCreationInput{
 		EntityName: args[0],
 		IsUuid:     isBinaryId,
-		Fields: underscore.Map(args[1:len(args)-1], func(item string) ModelFieldData {
+		Fields: underscore.Map(args[1:len(args)], func(item string) ModelFieldData {
 			var (
 				splitted = strings.Split(item, ":")
 				name     = splitted[0]
@@ -53,25 +52,72 @@ func isOptionalFromArgs(args []string) bool {
 }
 
 func trigger(input ModelCreationInput) error {
-	data := createUsefulData(input)
-	if err := createNewDirectories(data); err != nil {
+	mod, err := getGoModName()
+	if err != nil {
 		return err
 	}
-	if err := createModelFile(data); err != nil {
-		return err
+
+	data := createUsefulData(input, mod)
+
+	handlers := []func(usefulData) error{
+		validatesHasNeededDirs,
+		createNewDirectories,
+		createModelFile,
+		createRepositoryFile,
+		createControllerFile,
 	}
-	if err := createRepositoryFile(data); err != nil {
-		return err
+
+	for _, handler := range handlers {
+		if err := handler(data); err != nil {
+			return err
+		}
 	}
-	if err := createControllerFile(data); err != nil {
-		return err
+
+	return nil
+}
+
+func validatesHasNeededDirs(input usefulData) error {
+	log.Info("Validating needed directories to work...")
+	if _, err := os.Open(input.dirNames.internalBaseDir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return notInAValidProjectStructureError(input.dirNames.internalBaseDir)
+		}
 	}
+
+	if _, err := os.Open(input.dirNames.baseModelDir); err != nil {
+		if errors.Is(err, os.ErrNotExist) {
+			return notInAValidProjectStructureError(input.dirNames.baseModelDir)
+		}
+	}
+
 	return nil
 }
 
 func createNewDirectories(input usefulData) error {
-	log.Infof("Creating '%s' directory", input.modelServicePackageName)
-	return os.MkdirAll(fmt.Sprintf("./internal/%s", input.modelServicePackageName), os.ModePerm)
+	log.Infof("Creating new '%s' package", input.dirNames.serviceDir)
+
+	if err := os.Mkdir(input.serviceDir, os.ModePerm); err != nil {
+		if errors.Is(err, os.ErrExist) {
+			return errPackageAlreadyExists(input.dirNames.serviceDir, input.modelServicePackageName)
+		}
+	}
+
+	return nil
+}
+
+func getGoModName() (string, error) {
+	goModBytes, err := os.ReadFile("go.mod")
+	if err != nil {
+		if os.IsNotExist(err) {
+			return "", errors.New("go.mod not found")
+		}
+		return "", err
+	}
+
+	modName := modfile.ModulePath(goModBytes)
+	log.Infof("Go module detected: %s", modName)
+
+	return modName, nil
 }
 
 func configLogger() {

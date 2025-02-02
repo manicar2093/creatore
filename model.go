@@ -1,16 +1,12 @@
 package main
 
 import (
-	"fmt"
 	"github.com/charmbracelet/log"
 	. "github.com/dave/jennifer/jen"
 	"github.com/rjNemo/underscore"
-	"log/slog"
 )
 
 const idKey = "Id"
-
-var logger = slog.Default()
 
 type (
 	ModelFieldData struct {
@@ -32,7 +28,7 @@ func createModelFile(data usefulData) error {
 
 	jf.Add(generateModelCode(data))
 
-	return jf.Save(fmt.Sprintf("./domain/models/%s_creatore.go", data.modelServicePackageName))
+	return jf.Save(data.dirNames.modelFile)
 }
 
 func generateModelCode(input usefulData) Code {

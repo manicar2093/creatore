@@ -38,7 +38,7 @@ func createRepositoryFile(data usefulData) error {
 
 	jf.Add(generateRepositoryCode(data))
 
-	return jf.Save(fmt.Sprintf("./internal/%s/repository_creatore.go", data.modelServicePackageName))
+	return jf.Save(data.dirNames.repositoryFile)
 }
 
 func generateRepositoryCode(data usefulData) Code {

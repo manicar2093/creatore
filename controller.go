@@ -25,7 +25,7 @@ func createControllerFile(data usefulData) error {
 	//	logger.Error(err.Error())
 	//}
 
-	return jf.Save(fmt.Sprintf("./internal/%s/controller_creatore.go", data.modelServicePackageName))
+	return jf.Save(data.dirNames.controllerFile)
 }
 
 func generateControllerCode(input usefulData) Code {
