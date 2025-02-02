@@ -52,13 +52,13 @@ This creates a field called created_at of type time.Time
 
 `,
 		Args: cobra.MinimumNArgs(1),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		Run: func(cmd *cobra.Command, args []string) {
 			if err := trigger(normalizeArgsAsEntityInput(args, binaryId)); err != nil {
-				return err
+				log.Error(err.Error())
+				return
 			}
 
 			log.Info("✅ Ready!")
-			return nil
 		},
 	}
 )
