@@ -32,14 +32,24 @@ var (
 	}
 
 	genCmd = &cobra.Command{
-		Use:   "gen --binary-id [name] [args...]",
-		Short: "Create model, repository and controller",
+		Use:     "gen [model_name] [model_fields...]",
+		Short:   "Create model, repository and controller",
+		Example: "creatore gen User name:string:optional age:int --binary-id",
 		Long: `
-Create model, repository and controller with given data.
+Create model, repository and REST API controller with given data.
 
-creatore gen --binary-id User name:string:optional
+You can select from all golang types to create your model and set it as optional in case:
 
-If optional is omitted data is taken as required
+	name:string:optional
+
+This creates an optional field called name of type string. If optional is omitted data is taken as required.
+
+	createdAt:time
+
+This creates a field called created_at of type time.Time
+
+
+
 `,
 		Args: cobra.MinimumNArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {

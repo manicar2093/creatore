@@ -14,7 +14,7 @@ var binaryId bool
 func main() {
 	rootCmd.AddCommand(genCmd)
 	rootCmd.AddCommand(versionCmd)
-	genCmd.Flags().BoolVarP(&binaryId, "binary-id", "", false, "indicates if model has a UUID as id")
+	genCmd.Flags().BoolVarP(&binaryId, "binary-id", "", false, "indicates if model has a UUID as id. If omitted Id will be an int")
 
 	configLogger()
 	if err := rootCmd.Execute(); err != nil {
