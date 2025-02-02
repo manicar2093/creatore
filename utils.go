@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/charmbracelet/log"
 	. "github.com/dave/jennifer/jen"
 	"github.com/gertd/go-pluralize"
 	"github.com/iancoleman/strcase"
@@ -19,8 +20,8 @@ type structNames struct {
 	modelServicePackageName string
 	// modelStructName contains entity struct name following format: <EntityGivenByUser>
 	modelStructName string
-	// moduleName contains in which code needs to be generated
-	moduleName string
+	// goModName contains in which code needs to be generated
+	goModName string
 	// controllerStructName contains the name controller struct will use
 	controllerStructName string
 	// controllerStructConstructorName contains the name for controller constructor
@@ -30,9 +31,25 @@ type structNames struct {
 	updateSelectiveByIdInputStructName string
 }
 
+type dirNames struct {
+	// baseModelDir is the directory creatore is looking to save the new model file domain/models/
+	baseModelDir string
+	// internalBaseDir is where creatore will create the new package for the new model internal/
+	internalBaseDir string
+	// serviceDir is the path of the new package internal/<model_name>/
+	serviceDir string
+	// modelFile is the path of the file where the model will be saved
+	modelFile string
+	// controllerFile is the path where controller will be saved
+	controllerFile string
+	// repositoryFile is the path where repository will be saved
+	repositoryFile string
+}
+
 type usefulData struct {
 	structNames
-	// modelsKey contains literal "entities"
+	dirNames
+	// modelsKey contains literal "models"
 	modelsKey string
 	// fields contains all fields with useful data
 	fields []fieldMeta
@@ -44,7 +61,8 @@ type usefulData struct {
 	isIdUUID bool
 }
 
-func createUsefulData(input CreateEntityInput) usefulData {
+func createUsefulData(input ModelCreationInput, goModName string) usefulData {
+	log.Info("Creating data to generate code...")
 	var (
 		pc = pluralize.NewClient()
 
@@ -59,7 +77,6 @@ func createUsefulData(input CreateEntityInput) usefulData {
 		modelsKey                       = "models"
 		modelStructName                 = strcase.ToCamel(input.EntityName)
 		fieldsMeta, idType, idIsUUID    = normalizeEntityFieldsData(input)
-		moduleName                      = "github.com/user/package"
 	)
 
 	return usefulData{
@@ -69,17 +86,25 @@ func createUsefulData(input CreateEntityInput) usefulData {
 			repositoryStructVarName:            repositoryStructVarName,
 			modelServicePackageName:            modelServicePackageName,
 			modelStructName:                    modelStructName,
-			moduleName:                         moduleName, // TODO: This must be configurable
+			goModName:                          goModName,
 			controllerStructName:               controllerStructName,
 			controllerStructConstructorName:    controllerStructConstructorName,
 			receiverVarName:                    "c",
 			updateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
 		},
+		dirNames: dirNames{
+			baseModelDir:    "domain/models",
+			internalBaseDir: "internal/",
+			serviceDir:      fmt.Sprintf("internal/%s", modelServicePackageName),
+			modelFile:       fmt.Sprintf("domain/models/%s_creatore.go", modelServicePackageName),
+			controllerFile:  fmt.Sprintf("internal/%s/controller_creatore.go", modelServicePackageName),
+			repositoryFile:  fmt.Sprintf("internal/%s/repository_creatore.go", modelServicePackageName),
+		},
 		modelsKey:            modelsKey,
 		fields:               fieldsMeta,
 		idTypeAsJenCode:      idType,
 		isIdUUID:             idIsUUID,
-		modelStructQualifier: Qual(fmt.Sprintf("%s/%s", moduleName, modelsKey), modelStructName),
+		modelStructQualifier: Qual(fmt.Sprintf("%s/%s", goModName, modelsKey), modelStructName),
 	}
 }
 
@@ -88,16 +113,16 @@ type fieldMeta struct {
 	nameForStructAttribute string
 	nameForFunctionParams  string
 	typeAsJenCode          *Statement
-	field                  EntityField
+	field                  ModelFieldData
 	tags                   map[string]string
 }
 
-func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement, bool) {
+func normalizeEntityFieldsData(input ModelCreationInput) ([]fieldMeta, *Statement, bool) {
 	idField, isUUID := createIdField(input)
-	input.Fields = append([]EntityField{idField}, input.Fields...)
+	input.Fields = append([]ModelFieldData{idField}, input.Fields...)
 	var idType *Statement
 
-	return underscore.Map(input.Fields, func(f EntityField) fieldMeta {
+	return underscore.Map(input.Fields, func(f ModelFieldData) fieldMeta {
 		nameForStructAttribute := strcase.ToCamel(f.Name)
 		nameForFunctionParams := strcase.ToLowerCamel(f.Name)
 		if f.Name == "Id" {
@@ -115,20 +140,20 @@ func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement
 	}), idType, isUUID
 }
 
-func createIdField(input CreateEntityInput) (EntityField, bool) {
+func createIdField(input ModelCreationInput) (ModelFieldData, bool) {
 	if input.IsUuid {
-		return EntityField{
+		return ModelFieldData{
 			Name: idKey,
 			Type: "uuid",
 		}, true
 	}
-	return EntityField{
+	return ModelFieldData{
 		Name: idKey,
 		Type: "uint",
 	}, false
 }
 
-func getType(f EntityField) *Statement {
+func getType(f ModelFieldData) *Statement {
 	switch f.Type {
 	case "decimal":
 		return Qual("github.com/quagmt/udecimal", "Decimal")
@@ -141,7 +166,7 @@ func getType(f EntityField) *Statement {
 	}
 }
 
-func getFieldTags(field EntityField) map[string]string {
+func getFieldTags(field ModelFieldData) map[string]string {
 	tags := make(map[string]string)
 	tags["json"] = strcase.ToSnake(field.Name)
 	tags["mapstructure"] = strcase.ToSnake(field.Name)
