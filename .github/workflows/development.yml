@@ -1,0 +1,41 @@
+#name: Development Workflow
+#
+#on:
+#  pull_request:
+#    types: [edited, synchronize, opened, reopened]
+#    branches:
+#      - main
+#
+#jobs:
+#  golangci:
+#    name: lint
+#    runs-on: ubuntu-latest
+#    steps:
+#      - uses: actions/checkout@v3
+#      - name: golangci-lint
+#        uses: golangci/golangci-lint-action@v3
+#        with:
+#          only-new-issues: true
+#          skip-cache: true
+#          args: --verbose --timeout=3m
+#
+#  testing:
+#    name: test
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Set up Go
+#        uses: actions/setup-go@v3
+#        with:
+#          go-version: 1.21.x
+#      - name: Set GOBIN
+#        run: go env -w GOBIN=/usr/local/bin
+#      - uses: actions/checkout@v3
+#      - name: Install dependencies
+#        run: |
+#          go mod download
+#          go install -mod=mod github.com/onsi/ginkgo/v2/ginkgo
+#          go install github.com/swaggo/swag/cmd/swag@latest
+#          npm install -g dotenv-cli
+#          npm i --include=dev
+#      - name: Tests
+#        run: make test
