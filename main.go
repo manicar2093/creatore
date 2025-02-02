@@ -28,10 +28,13 @@ func main() {
 
 func trigger(input CreateEntityInput) error {
 	data := createUsefulData(input)
-	if err := createEntityFile(input, data); err != nil {
+	if err := createEntityFile(data); err != nil {
 		return err
 	}
 	if err := createRepositoryFile(data); err != nil {
+		return err
+	}
+	if err := createControllerFile(data); err != nil {
 		return err
 	}
 	return nil

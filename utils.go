@@ -8,25 +8,40 @@ import (
 	"github.com/rjNemo/underscore"
 )
 
-type usefulData struct {
+type structNames struct {
 	// repositoryStructName contains struct name for repository following this format: <Entity>Repository
 	repositoryStructName string
+	// repositoryStructName contains var name for repository following this format: <entity>Repository
+	repositoryStructVarName string
 	// repositoryStructConstructorName contains how repository constructor method has to be named
 	repositoryStructConstructorName string
-	// entityServicePackageName contains entity package name following the format: <entity_given_by_user>
-	entityServicePackageName string
-	// entityStructName contains entity struct name following format: <EntityGivenByUser>
-	entityStructName string
-	// entitiesKey contains literal "entities"
-	entitiesKey string
-	// fields contains all fields with useful data
-	fields []fieldMeta
+	// modelServicePackageName contains entity package name following the format: <entity_given_by_user>
+	modelServicePackageName string
+	// modelStructName contains entity struct name following format: <EntityGivenByUser>
+	modelStructName string
 	// moduleName contains in which code needs to be generated
 	moduleName string
+	// controllerStructName contains the name controller struct will use
+	controllerStructName string
+	// controllerStructConstructorName contains the name for controller constructor
+	controllerStructConstructorName string
+	// receiverVarName contains the name of receiver var name for struct methods
+	receiverVarName                    string
+	updateSelectiveByIdInputStructName string
+}
+
+type usefulData struct {
+	structNames
+	// modelsKey contains literal "entities"
+	modelsKey string
+	// fields contains all fields with useful data
+	fields []fieldMeta
 	// idTypeAsJenCode contains the id type as qualifier
 	idTypeAsJenCode *Statement
-	// entityStructQualifier contains the quealifier code for entity
-	entityStructQualifier *Statement
+	// modelStructQualifier contains the quealifier code for entity
+	modelStructQualifier *Statement
+	// isIdUUID indicates if id is type UUID. If false is considered id is an int
+	isIdUUID bool
 }
 
 func createUsefulData(input CreateEntityInput) usefulData {
@@ -34,25 +49,37 @@ func createUsefulData(input CreateEntityInput) usefulData {
 		pc = pluralize.NewClient()
 
 		entityNameAsPlural              = pc.Plural(input.EntityName)
-		repositoryStructName            = fmt.Sprintf("%sRepository", strcase.ToCamel(entityNameAsPlural))
+		entityPluralNameAsCamelCase     = strcase.ToCamel(entityNameAsPlural)
+		repositoryStructName            = fmt.Sprintf("%sRepository", entityPluralNameAsCamelCase)
+		repositoryStructVarName         = fmt.Sprintf("%sRepository", strcase.ToLowerCamel(entityPluralNameAsCamelCase))
+		controllerStructName            = fmt.Sprintf("%sController", entityPluralNameAsCamelCase)
 		repositoryStructConstructorName = fmt.Sprintf("New%s", repositoryStructName)
-		entityServicePackageName        = strcase.ToSnake(entityNameAsPlural)
-		entitiesKey                     = "entities"
-		entityStructName                = strcase.ToCamel(input.EntityName)
-		fieldsMeta, idType              = normalizeEntityFieldsData(input)
+		controllerStructConstructorName = fmt.Sprintf("New%s", controllerStructName)
+		modelServicePackageName         = strcase.ToSnake(entityNameAsPlural)
+		modelsKey                       = "models"
+		modelStructName                 = strcase.ToCamel(input.EntityName)
+		fieldsMeta, idType, idIsUUID    = normalizeEntityFieldsData(input)
 		moduleName                      = "github.com/user/package"
 	)
 
 	return usefulData{
-		repositoryStructName:            repositoryStructName,
-		repositoryStructConstructorName: repositoryStructConstructorName,
-		entityServicePackageName:        entityServicePackageName,
-		entityStructName:                entityStructName,
-		entitiesKey:                     entitiesKey,
-		fields:                          fieldsMeta,
-		moduleName:                      moduleName, // TODO: This must be configurable
-		idTypeAsJenCode:                 idType,
-		entityStructQualifier:           Qual(fmt.Sprintf("%s/%s", moduleName, entitiesKey), entityStructName),
+		structNames: structNames{
+			repositoryStructName:               repositoryStructName,
+			repositoryStructConstructorName:    repositoryStructConstructorName,
+			repositoryStructVarName:            repositoryStructVarName,
+			modelServicePackageName:            modelServicePackageName,
+			modelStructName:                    modelStructName,
+			moduleName:                         moduleName, // TODO: This must be configurable
+			controllerStructName:               controllerStructName,
+			controllerStructConstructorName:    controllerStructConstructorName,
+			receiverVarName:                    "c",
+			updateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
+		},
+		modelsKey:            modelsKey,
+		fields:               fieldsMeta,
+		idTypeAsJenCode:      idType,
+		isIdUUID:             idIsUUID,
+		modelStructQualifier: Qual(fmt.Sprintf("%s/%s", moduleName, modelsKey), modelStructName),
 	}
 }
 
@@ -65,8 +92,8 @@ type fieldMeta struct {
 	tags                   map[string]string
 }
 
-func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement) {
-	idField := createIdField(input)
+func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement, bool) {
+	idField, isUUID := createIdField(input)
 	input.Fields = append([]EntityField{idField}, input.Fields...)
 	var idType *Statement
 
@@ -74,34 +101,34 @@ func normalizeEntityFieldsData(input CreateEntityInput) ([]fieldMeta, *Statement
 		nameForStructAttribute := strcase.ToCamel(f.Name)
 		nameForFunctionParams := strcase.ToLowerCamel(f.Name)
 		if f.Name == "Id" {
-			idType = getType(idField, nameForStructAttribute)
+			idType = getType(idField)
 		}
 
 		return fieldMeta{
 			nameForTags:            strcase.ToSnake(f.Name),
 			nameForStructAttribute: nameForStructAttribute,
 			nameForFunctionParams:  nameForFunctionParams,
-			typeAsJenCode:          getType(f, nameForStructAttribute),
+			typeAsJenCode:          getType(f),
 			field:                  f,
 			tags:                   getFieldTags(f),
 		}
-	}), idType
+	}), idType, isUUID
 }
 
-func createIdField(input CreateEntityInput) EntityField {
+func createIdField(input CreateEntityInput) (EntityField, bool) {
 	if input.IsUuid {
 		return EntityField{
 			Name: idKey,
 			Type: "uuid",
-		}
+		}, true
 	}
 	return EntityField{
 		Name: idKey,
 		Type: "uint",
-	}
+	}, false
 }
 
-func getType(f EntityField, nameForStructAttribute string) *Statement {
+func getType(f EntityField) *Statement {
 	switch f.Type {
 	case "decimal":
 		return Qual("github.com/quagmt/udecimal", "Decimal")
