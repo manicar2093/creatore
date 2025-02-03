@@ -149,7 +149,7 @@ func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *State
 		underscore.Map(input.fields, func(meta fieldMeta) Code {
 			if meta.field.Name == "Id" {
 				// TODO: create a new way to generate tags
-				return Null().Id(meta.nameForStructAttribute).Add(meta.typeAsJenCode).Tag(map[string]string{"json": "id", "validate": ternary.If(input.isIdUUID, "required_uuid", "required")})
+				return Null().Id(meta.nameForStructAttribute).Add(meta.typeAsJenCode).Tag(map[string]string{"json": "id", "param": "id", "validate": ternary.If(input.isIdUUID, "required_uuid", "required")})
 			}
 			return Null().Id(meta.nameForStructAttribute).Qual(optionalQual, optionalName).Index(meta.typeAsJenCode).Tag(meta.tags)
 		})...,
