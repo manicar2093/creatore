@@ -12,4 +12,5 @@ const (
 	gormppagerQual                   = "github.com/manicar2093/gormpager"
 	gormppagerPageQual               = "Page"
 	netHttpQual                      = "net/http"
+	echoQual                         = "github.com/labstack/echo/v4"
 )

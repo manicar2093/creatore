@@ -10,11 +10,16 @@ import (
 	"time"
 )
 
-var binaryId bool
+var (
+	binaryId bool
+	isForced bool
+)
 
 func main() {
 	rootCmd.AddCommand(genCmd)
 	rootCmd.AddCommand(versionCmd)
+	rootCmd.AddCommand(initCmd)
+	initCmd.Flags().BoolVarP(&isForced, "force", "f", false, "force project initialization")
 	genCmd.Flags().BoolVarP(&binaryId, "binary-id", "", false, "indicates if model has a UUID as id. If omitted Id will be an int")
 
 	configLogger()
