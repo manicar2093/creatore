@@ -114,6 +114,7 @@ From this you can start using gen command.
 			log.Infof(`🏁 Next steps:
 ➡️ Run 'cd %s'
 ➡️ Run 'go mod tidy' to install deps
+➡️ Run 'npm i' to install prisma deps
 ➡️ Run 'creatore gen' command to create your first API resource
 ➡️ Enjoy! 😎
 `, projectDirName)

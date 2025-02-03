@@ -1,0 +1,14 @@
+{{ define "prisma_model" }}
+
+model {{.ModelStructName}} {
+    {{range .Fields}}{{block "prisma_field_type" .}}{{end}}{{end}}
+    @@map("{{.ModelServicePackageName}}")
+}
+
+{{end}}
+
+{{ define "prisma_field_type" }}
+    {{ .NameForTags }} {{ .Type }}{{if .Field.IsOptional}}?{{end}} {{if eq .Field.Type "uuid"}}@db.Uuid{{end}} {{block "handle_id_field" .}}{{end}}
+{{ end }}
+
+{{define "handle_id_field"}}{{if .IsId}}@id @default({{if eq .Field.Type "uuid"}}dbgenerated("gen_random_uuid()"){{else}}autoincrement(){{end}}){{end}}{{end}}
