@@ -56,21 +56,21 @@ func generateControllerCode(input usefulData) Code {
 
 func routesRegistryMethod(input usefulData) Code {
 	groupVar := fmt.Sprintf("%sGroup", input.modelServicePackageName)
-	baseRoute := fmt.Sprintf("/%s", input.modelServicePackageName)
-	byIdRoute := fmt.Sprintf("%s/:id", baseRoute)
+	baseRoute := ""
+	byIdRoute := "/:id"
 
 	return Func().
 		Params(controllerReceiverParam(input)).
 		Id("SetUpRoutes").
 		Params(
-			Id("group").Op("*").Qual(echoQual, "Group"),
+			Id("group").Op(pointerKeyword).Qual(echoQual, "Group"),
 		).Block(
 		Id(groupVar).
 			Op(":=").
 			Id("group").
 			Dot("Group").
 			Call(
-				Lit(baseRoute),
+				Lit(fmt.Sprintf("/%s", input.modelServicePackageName)),
 			),
 		Line(),
 		Id(groupVar).Dot("GET").Call(Lit(baseRoute), Id(input.receiverVarName).Dot(handlerMethodName(getAllPaginatedMethodKey))),
@@ -87,7 +87,7 @@ func generateControllerStruct(input usefulData) Code {
 		Type().
 		Id(input.controllerStructName).
 		Struct(
-			Id(input.repositoryStructVarName).Op("*").Id(input.repositoryStructName),
+			Id(input.repositoryStructVarName).Op(pointerKeyword).Id(input.repositoryStructName),
 		)
 }
 
@@ -95,12 +95,12 @@ func generateControllerConstructor(input usefulData) Code {
 	return Func().
 		Id(input.controllerStructConstructorName).
 		Params(
-			Id(input.repositoryStructVarName).Op("*").Id(input.repositoryStructName),
+			Id(input.repositoryStructVarName).Op(pointerKeyword).Id(input.repositoryStructName),
 		).
-		Op("*").Id(input.controllerStructName).
+		Op(pointerKeyword).Id(input.controllerStructName).
 		Block(
 			Return(
-				Op("&").Id(input.controllerStructName).Values(
+				Op(receiverPointerKeyword).Id(input.controllerStructName).Values(
 					Dict{
 						Id(input.repositoryStructVarName): Id(input.repositoryStructVarName),
 					},
@@ -124,14 +124,14 @@ func generateControllerSaveMethod(input usefulData) Code {
 		Block(
 			Var().Id(reqKeyword).Op("=").Add(input.modelStructQualifier).Values(),
 			If(
-				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op(receiverPointerKeyword).Id(reqKeyword)),
 				Err().Op("!=").Nil(),
 			).Block(
 				Return(Err()),
 			).Line(),
 			If(
 				Err().Op(":=").Id(input.receiverVarName).Dot(input.repositoryStructVarName).Dot(saveMethodKey).Call(
-					Op("&").Id(reqKeyword),
+					Op(receiverPointerKeyword).Id(reqKeyword),
 				),
 				Err().Op("!=").Nil(),
 			).Block(
@@ -139,7 +139,7 @@ func generateControllerSaveMethod(input usefulData) Code {
 			),
 			Line(),
 			Return(
-				Id(ctxKeyword).Dot("JSON").Call(Qual(netHttpQual, "StatusCreated"), Op("&").Id(reqKeyword)),
+				Id(ctxKeyword).Dot("JSON").Call(Qual(netHttpQual, "StatusCreated"), Op(receiverPointerKeyword).Id(reqKeyword)),
 			),
 		)
 }
@@ -155,7 +155,7 @@ func generateControllerGetById(input usefulData) Code {
 		Block(
 			Id(reqKeyword).Op(":=").Qual(winterCommonReqQual, ternary.If(input.isIdUUID, "GetByIdUUID", "GetById")).Values(),
 			If(
-				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op(receiverPointerKeyword).Id(reqKeyword)),
 				Err().Op("!=").Nil(),
 			).Block(
 				Return(Err()),
@@ -169,7 +169,7 @@ func generateControllerGetById(input usefulData) Code {
 			),
 			Line(),
 			Return(
-				Id(ctxKeyword).Dot("JSON").Call(Qual(netHttpQual, "StatusOK"), Op("&").Id(resKeyword)),
+				Id(ctxKeyword).Dot("JSON").Call(Qual(netHttpQual, "StatusOK"), Op(receiverPointerKeyword).Id(resKeyword)),
 			),
 		)
 }
@@ -183,7 +183,7 @@ func generateControllerGetAllPaginatedMethods(input usefulData) Code {
 		Block(
 			Id(reqKeyword).Op(":=").Qual(winterCommonReqQual, winterRequestsPageData).Values(),
 			If(
-				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op(receiverPointerKeyword).Id(reqKeyword)),
 				Err().Op("!=").Nil(),
 			).Block(
 				Return(Err()),
@@ -199,7 +199,7 @@ func generateControllerGetAllPaginatedMethods(input usefulData) Code {
 			Return(
 				Id(ctxKeyword).Dot("JSON").Call(
 					Qual(netHttpQual, "StatusOK"),
-					Op("&").Id(resKeyword),
+					Op(receiverPointerKeyword).Id(resKeyword),
 				),
 			),
 		)
@@ -214,7 +214,7 @@ func generateControllerUpdateSelectiveMethod(input usefulData) Code {
 		Block(
 			Id(reqKeyword).Op(":=").Id(input.updateSelectiveByIdInputStructName).Values(),
 			If(
-				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op(receiverPointerKeyword).Id(reqKeyword)),
 				Err().Op("!=").Nil(),
 			).Block(
 				Return(Err()),
@@ -227,7 +227,7 @@ func generateControllerUpdateSelectiveMethod(input usefulData) Code {
 			Return(
 				Id(ctxKeyword).Dot("JSON").Call(
 					Qual(netHttpQual, "StatusOK"),
-					Op("&").Id(resKeyword),
+					Op(receiverPointerKeyword).Id(resKeyword),
 				),
 			),
 		)
@@ -242,13 +242,13 @@ func generateControllerDeleteByIdMethod(input usefulData) Code {
 		Block(
 			Id(reqKeyword).Op(":=").Qual(winterCommonReqQual, ternary.If(input.isIdUUID, "GetByIdUUID", "GetById")).Values(),
 			If(
-				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op("&").Id(reqKeyword)),
+				Err().Op(":=").Qual(winterQual, winterBindAndValidate).Call(Id(ctxKeyword), Op(receiverPointerKeyword).Id(reqKeyword)),
 				Err().Op("!=").Nil(),
 			).Block(
 				Return(Err()),
 			),
 			If(
-				Err().Op(":=").Id(ctxKeyword).Dot(input.repositoryStructVarName).Dot(deleteByIdMethodKey).Call(
+				Err().Op(":=").Id(input.receiverVarName).Dot(input.repositoryStructVarName).Dot(deleteByIdMethodKey).Call(
 					Id(reqKeyword).Dot("Id"),
 				),
 				Err().Op("!=").Nil(),
@@ -273,5 +273,5 @@ func echoContextParam() Code {
 }
 
 func controllerReceiverParam(input usefulData) Code {
-	return Id(input.receiverVarName).Op("*").Id(input.controllerStructName)
+	return Id(input.receiverVarName).Op(pointerKeyword).Id(input.controllerStructName)
 }
