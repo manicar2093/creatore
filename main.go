@@ -29,13 +29,13 @@ func main() {
 func normalizeArgsAsEntityInput(args []string, isBinaryId bool) ModelCreationInput {
 	return ModelCreationInput{
 		EntityName: args[0],
-		IsUuid:     isBinaryId,
+		IsIdUuid:   isBinaryId,
 		Fields: underscore.Map(args[1:], func(item string) ModelFieldData {
 			var (
 				splitted = strings.Split(item, ":")
 				name     = splitted[0]
 				typ      = splitted[1]
-				isOpt    = isOptionalFromArgs(args)
+				isOpt    = isOptionalFromArgs(splitted)
 			)
 
 			return ModelFieldData{
@@ -84,15 +84,15 @@ func trigger(input ModelCreationInput) error {
 
 func validatesHasNeededDirs(input usefulData) error {
 	log.Info("Validating needed directories to work...")
-	if _, err := os.Open(input.dirNames.internalBaseDir); err != nil {
+	if _, err := os.Open(input.DirNames.InternalBaseDir); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return notInAValidProjectStructureError(input.dirNames.internalBaseDir)
+			return notInAValidProjectStructureError(input.DirNames.InternalBaseDir)
 		}
 	}
 
-	if _, err := os.Open(input.dirNames.baseModelDir); err != nil {
+	if _, err := os.Open(input.DirNames.BaseModelDir); err != nil {
 		if errors.Is(err, os.ErrNotExist) {
-			return notInAValidProjectStructureError(input.dirNames.baseModelDir)
+			return notInAValidProjectStructureError(input.DirNames.BaseModelDir)
 		}
 	}
 
@@ -100,11 +100,11 @@ func validatesHasNeededDirs(input usefulData) error {
 }
 
 func createNewDirectories(input usefulData) error {
-	log.Infof("Creating new '%s' package", input.dirNames.serviceDir)
+	log.Infof("Creating new '%s' package", input.DirNames.ServiceDir)
 
-	if err := os.Mkdir(input.serviceDir, os.ModePerm); err != nil {
+	if err := os.Mkdir(input.ServiceDir, os.ModePerm); err != nil {
 		if errors.Is(err, os.ErrExist) {
-			return errPackageAlreadyExists(input.dirNames.serviceDir, input.modelServicePackageName)
+			return errPackageAlreadyExists(input.DirNames.ServiceDir, input.ModelServicePackageName)
 		}
 	}
 
