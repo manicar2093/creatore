@@ -30,7 +30,7 @@ func normalizeArgsAsEntityInput(args []string, isBinaryId bool) ModelCreationInp
 	return ModelCreationInput{
 		EntityName: args[0],
 		IsUuid:     isBinaryId,
-		Fields: underscore.Map(args[1:len(args)], func(item string) ModelFieldData {
+		Fields: underscore.Map(args[1:], func(item string) ModelFieldData {
 			var (
 				splitted = strings.Split(item, ":")
 				name     = splitted[0]
