@@ -1,3 +1,12 @@
+## v0.3.3 (2025-02-03)
+
+### Fix
+
+- change Get to GET from init enpoint declaration
+- change routes declarations to remove duplicated path
+- change conn var name to db and add * and & as constants
+- change model struct qualifier
+
 ## v0.3.2 (2025-02-03)
 
 ### Fix
