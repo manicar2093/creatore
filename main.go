@@ -68,6 +68,7 @@ func trigger(input ModelCreationInput) error {
 		validatesHasNeededDirs,
 		createNewDirectories,
 		createModelFile,
+		createPrismaMigration,
 		createRepositoryFile,
 		createControllerFile,
 	}
