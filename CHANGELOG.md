@@ -1,3 +1,9 @@
+## v0.3.2 (2025-02-03)
+
+### Fix
+
+- change model file path adding internal
+
 ## v0.3.1 (2025-02-03)
 
 ### Fix
