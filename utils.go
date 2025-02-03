@@ -189,6 +189,9 @@ func getFieldTags(field ModelFieldData, isId bool) map[string]string {
 	if isId {
 		tags["param"] = strcase.ToSnake(field.Name)
 	}
+	if !field.IsOptional {
+		tags["validate"] = "required"
+	}
 	switch {
 	case field.Name == idKey && field.Type == "uuid":
 		tags["gorm"] = "default:gen_random_uuid()"
