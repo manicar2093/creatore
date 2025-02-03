@@ -126,7 +126,8 @@ func normalizeEntityFieldsData(input ModelCreationInput) ([]fieldMeta, *Statemen
 	return underscore.Map(input.Fields, func(f ModelFieldData) fieldMeta {
 		nameForStructAttribute := strcase.ToCamel(f.Name)
 		nameForFunctionParams := strcase.ToLowerCamel(f.Name)
-		if f.Name == "Id" {
+		isId := f.Name == "Id"
+		if isId {
 			idType = getType(idField)
 		}
 
@@ -136,7 +137,7 @@ func normalizeEntityFieldsData(input ModelCreationInput) ([]fieldMeta, *Statemen
 			nameForFunctionParams:  nameForFunctionParams,
 			typeAsJenCode:          getType(f),
 			field:                  f,
-			tags:                   getFieldTags(f),
+			tags:                   getFieldTags(f, isId),
 		}
 	}), idType, isUUID
 }
@@ -167,10 +168,13 @@ func getType(f ModelFieldData) *Statement {
 	}
 }
 
-func getFieldTags(field ModelFieldData) map[string]string {
+func getFieldTags(field ModelFieldData, isId bool) map[string]string {
 	tags := make(map[string]string)
 	tags["json"] = strcase.ToSnake(field.Name)
 	tags["mapstructure"] = strcase.ToSnake(field.Name)
+	if isId {
+		tags["param"] = strcase.ToSnake(field.Name)
+	}
 	switch {
 	case field.Name == idKey && field.Type == "uuid":
 		tags["gorm"] = "default:gen_random_uuid()"
