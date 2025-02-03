@@ -14,3 +14,21 @@ tasks:
     cmds:
       - go fmt ./...
     silent: true
+  install:
+    cmds:
+      - go install
+    silent: true
+  test-init:
+    deps: [install]
+    cmds:
+      - creatore init test
+  test-gen:
+    deps: [test-init]
+    dir: test/
+    cmds:
+      - creatore gen User names:string last_names:string password:string created_at:time --binary-id
+  test-remove:
+    cmds:
+      - rm -r test/
+
+
