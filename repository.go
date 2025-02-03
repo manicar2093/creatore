@@ -14,6 +14,7 @@ const (
 	getAllPaginatedMethodKey     = "GetAllPaginated"
 	updateSelectiveByIdMethodKey = "UpdateSelectiveById"
 	deleteByIdMethodKey          = "DeleteById"
+	dbKeyword                    = "db"
 )
 
 type methodGenerators func(input usefulData, fnTargetKeyword *Statement) Code
@@ -41,27 +42,36 @@ func createRepositoryFile(data usefulData) error {
 	return jf.Save(data.dirNames.repositoryFile)
 }
 
-func generateRepositoryCode(data usefulData) Code {
-	result := Null().Type().Id(data.repositoryStructName).Struct(
-		Id("db").Op("*").Qual(winterConnectionsQual, winterConnectionsConnWrapperQual),
-	).Line().Line().Null().Func().Id(data.repositoryStructConstructorName).Params(
-		Id("db").Op("*").Qual(winterConnectionsQual, winterConnectionsConnWrapperQual),
-	).Block(
+func generateRepositoryCode(input usefulData) Code {
+	result := Null().
+		Type().
+		Id(input.repositoryStructName).
+		Struct(
+			Id(dbKeyword).Op(pointerKeyword).Qual(winterConnectionsQual, winterConnectionsConnWrapperQual),
+		).
+		Line().
+		Line().
+		Func().
+		Id(input.repositoryStructConstructorName).
+		Params(
+			Id(dbKeyword).Op(pointerKeyword).Qual(winterConnectionsQual, winterConnectionsConnWrapperQual),
+		).Op(pointerKeyword).Id(input.repositoryStructName).Block(
 		Return(
-			Id(fmt.Sprintf("&%s", data.repositoryStructName)).Values(
-				Dict{
-					Id("db"): Id("db"),
-				},
-			),
+			Id(fmt.Sprintf("&%s", input.repositoryStructName)).
+				Values(
+					Dict{
+						Id(dbKeyword): Id(dbKeyword),
+					},
+				),
 		),
 	).Line().Line()
 
 	underscore.Each(RepoSupportedMethods, func(s string) {
 		funcContext := Func().Params(
-			Id("c").Op("*").Id(data.repositoryStructName),
+			Id(input.receiverVarName).Op(pointerKeyword).Id(input.repositoryStructName),
 		)
 
-		result.Add(repoMethodsGeneratorsMap[s](data, funcContext))
+		result.Add(repoMethodsGeneratorsMap[s](input, funcContext))
 	})
 
 	return result
@@ -72,11 +82,11 @@ func saveMethodGenerator(input usefulData, fnTargetKeyword *Statement) Code {
 		Line().
 		Add(fnTargetKeyword).Id(saveMethodKey).
 		Params(
-			Id("input").Op("*").Add(input.modelStructQualifier),
+			Id("input").Op(pointerKeyword).Add(input.modelStructQualifier),
 		).Error().
 		Block(
 			If(
-				Id("res").Op(":=").Id("c").Dot("db").Dot("Save").Call(
+				Id("res").Op(":=").Id(input.receiverVarName).Dot(dbKeyword).Dot("Save").Call(
 					Id("input"),
 				),
 				Id("res").Dot("Error").Op("!=").Nil(),
@@ -93,20 +103,20 @@ func getByIdMethodGenerator(input usefulData, fnTargetKeyword *Statement) Code {
 	return fnTargetKeyword.Id(getByIdMethodKey).Params(
 		Id("id").Add(input.idTypeAsJenCode),
 	).Params(
-		Op("*").Add(input.modelStructQualifier),
+		Op(pointerKeyword).Add(input.modelStructQualifier),
 		Error(),
 	).Block(
 		Var().Id("found").Add(input.modelStructQualifier),
 		If(
-			Id("res").Op(":=").Id("c").Dot("db").Dot("First").Call(
-				Op("&").Id("found"),
+			Id("res").Op(":=").Id(input.receiverVarName).Dot(dbKeyword).Dot("First").Call(
+				Op(receiverPointerKeyword).Id("found"),
 				Id("id"),
 			),
 			Id("res").Dot("Error").Op("!=").Nil(),
 		).Block(
 			Return(Nil(), Id("res").Dot("Error")),
 		),
-		Return(Op("&").Id("found"), Nil()),
+		Return(Op(receiverPointerKeyword).Id("found"), Nil()),
 	).Line().Line()
 }
 
@@ -114,7 +124,7 @@ func getAllPaginatedMethodGenerator(input usefulData, fnTargetKeyword *Statement
 	return fnTargetKeyword.Id(getAllPaginatedMethodKey).Params(
 		Id("pageNumber").Op(",").Id("pageSize").Int(),
 	).Params(
-		Op("*").Qual(gormppagerQual, gormppagerPageQual).Index(input.modelStructQualifier),
+		Op(pointerKeyword).Qual(gormppagerQual, gormppagerPageQual).Index(input.modelStructQualifier),
 		Error(),
 	).Block(
 		Id("pager").Op(":=").Qual(gormppagerQual, gormppagerPageQual).Index(input.modelStructQualifier).Values(
@@ -123,14 +133,14 @@ func getAllPaginatedMethodGenerator(input usefulData, fnTargetKeyword *Statement
 		),
 		If(
 			Id("err").Op(":=").Id("pager").Dot("SelectPages").Call(
-				Id("c").Dot("conn").Dot("GormPager"),
-				Id("c").Dot("conn").Dot("DB"),
+				Id(input.receiverVarName).Dot(dbKeyword).Dot("GormPager"),
+				Id(input.receiverVarName).Dot(dbKeyword).Dot("DB"),
 			),
 			Id("err").Op("!=").Nil(),
 		).Block(
-			Return(Nil(), Error()),
+			Return(Nil(), Err()),
 		),
-		Return(Op("&").Id("pager"), Nil()),
+		Return(Op(receiverPointerKeyword).Id("pager"), Nil()),
 	).Line().Line()
 }
 
@@ -171,7 +181,7 @@ func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *State
 	}
 	updateBody = append(updateBody, optionValidations...)
 	updateGormCall := If(
-		Id("res").Op(":=").Id("c").Dot("db").Dot("Model").Call(Id(fmt.Sprintf("&%s", "result"))).Dot("Clauses").Call(Id("clause.Returning{}")).Dot("Where").Call(Lit("id = ?"), Id("changes").Dot("Id")).Dot("Updates").Call(Id("updates")),
+		Id("res").Op(":=").Id(input.receiverVarName).Dot(dbKeyword).Dot("Model").Call(Id(fmt.Sprintf("&%s", "result"))).Dot("Clauses").Call(Id("clause.Returning{}")).Dot("Where").Call(Lit("id = ?"), Id("changes").Dot("Id")).Dot("Updates").Call(Id("updates")),
 		Id("res").Dot("Error").Op("!=").Nil(),
 	).Block(
 		Return(Nil(), Id("res").Dot("Error")),
@@ -179,7 +189,7 @@ func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *State
 	updateBody = append(updateBody,
 		Line(),
 		updateGormCall,
-		Return(Op("&").Id("result"), Nil()),
+		Return(Op(receiverPointerKeyword).Id("result"), Nil()),
 	)
 
 	return strct.
@@ -192,7 +202,7 @@ func updateSelectiveByIdMethodGenerator(input usefulData, fnTargetKeyword *State
 		Params(
 			Id("changes").Id(input.updateSelectiveByIdInputStructName),
 		).Params(
-		Op("*").Add(input.modelStructQualifier), Error(),
+		Op(pointerKeyword).Add(input.modelStructQualifier), Error(),
 	).Block(
 		updateBody...,
 	).Line().Line()
@@ -205,8 +215,8 @@ func deleteByIdMethodGenerator(input usefulData, fnTargetKeyword *Statement) Cod
 		Error(),
 	).Block(
 		If(
-			Id("res").Op(":=").Id("c").Dot("conn").Dot("Delete").Call(
-				Op("&").Add(input.modelStructQualifier).Block(),
+			Id("res").Op(":=").Id(input.receiverVarName).Dot(dbKeyword).Dot("Delete").Call(
+				Op(receiverPointerKeyword).Add(input.modelStructQualifier).Block(),
 				Lit("id = ?"),
 				Id("id"),
 			),

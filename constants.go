@@ -13,4 +13,6 @@ const (
 	gormppagerPageQual               = "Page"
 	netHttpQual                      = "net/http"
 	echoQual                         = "github.com/labstack/echo/v4"
+	pointerKeyword                   = "*"
+	receiverPointerKeyword           = "&"
 )
