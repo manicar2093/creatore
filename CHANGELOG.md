@@ -1,3 +1,10 @@
+## v0.3.4 (2025-02-03)
+
+### Fix
+
+- add id param tag to model
+- add param tag to update selective struct
+
 ## v0.3.3 (2025-02-03)
 
 ### Fix
