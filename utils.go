@@ -9,56 +9,58 @@ import (
 	"github.com/rjNemo/underscore"
 )
 
-type structNames struct {
-	// repositoryStructName contains struct name for repository following this format: <Entity>Repository
-	repositoryStructName string
-	// repositoryStructName contains var name for repository following this format: <entity>Repository
-	repositoryStructVarName string
-	// repositoryStructConstructorName contains how repository constructor method has to be named
-	repositoryStructConstructorName string
-	// modelServicePackageName contains entity package name following the format: <entity_given_by_user>
-	modelServicePackageName string
-	// modelStructName contains entity struct name following format: <EntityGivenByUser>
-	modelStructName string
-	// goModName contains in which code needs to be generated
-	goModName string
-	// controllerStructName contains the name controller struct will use
-	controllerStructName string
-	// controllerStructConstructorName contains the name for controller constructor
-	controllerStructConstructorName string
-	// receiverVarName contains the name of receiver var name for struct methods
-	receiverVarName                    string
-	updateSelectiveByIdInputStructName string
+type StructNames struct {
+	// ModelSnakeCase contains model name as received in snake_case
+	ModelSnakeCase string
+	// RepositoryStructName contains struct name for repository following this format: <Entity>Repository
+	RepositoryStructName string
+	// RepositoryStructName contains var name for repository following this format: <entity>Repository
+	RepositoryStructVarName string
+	// RepositoryStructConstructorName contains how repository constructor method has to be named
+	RepositoryStructConstructorName string
+	// ModelServicePackageName contains entity package name following the format: <entity_given_by_user>
+	ModelServicePackageName string
+	// ModelStructName contains entity struct name following format: <EntityGivenByUser>
+	ModelStructName string
+	// GoModName contains in which code needs to be generated
+	GoModName string
+	// ControllerStructName contains the name controller struct will use
+	ControllerStructName string
+	// ControllerStructConstructorName contains the name for controller constructor
+	ControllerStructConstructorName string
+	// ReceiverVarName contains the name of receiver var name for struct methods
+	ReceiverVarName                    string
+	UpdateSelectiveByIdInputStructName string
 }
 
-type dirNames struct {
-	// baseModelDir is the directory creatore is looking to save the new model file domain/models/
-	baseModelDir string
-	// internalBaseDir is where creatore will create the new package for the new model internal/
-	internalBaseDir string
-	// serviceDir is the path of the new package internal/<model_name>/
-	serviceDir string
-	// modelFile is the path of the file where the model will be saved
-	modelFile string
-	// controllerFile is the path where controller will be saved
-	controllerFile string
-	// repositoryFile is the path where repository will be saved
-	repositoryFile string
+type DirNames struct {
+	// BaseModelDir is the directory creatore is looking to save the new model file domain/models/
+	BaseModelDir string
+	// InternalBaseDir is where creatore will create the new package for the new model internal/
+	InternalBaseDir string
+	// ServiceDir is the path of the new package internal/<model_name>/
+	ServiceDir string
+	// ModelFile is the path of the file where the model will be saved
+	ModelFile string
+	// ControllerFile is the path where controller will be saved
+	ControllerFile string
+	// RepositoryFile is the path where repository will be saved
+	RepositoryFile string
 }
 
 type usefulData struct {
-	structNames
-	dirNames
-	// modelsKey contains literal "models"
-	modelsKey string
-	// fields contains all fields with useful data
-	fields []fieldMeta
-	// idTypeAsJenCode contains the id type as qualifier
-	idTypeAsJenCode *Statement
-	// modelStructQualifier contains the quealifier code for entity
-	modelStructQualifier *Statement
-	// isIdUUID indicates if id is type UUID. If false is considered id is an int
-	isIdUUID bool
+	StructNames
+	DirNames
+	// ModelsKey contains literal "models"
+	ModelsKey string
+	// Fields contains all Fields with useful data
+	Fields []FieldMeta
+	// IdTypeAsJenCode contains the id type as qualifier
+	IdTypeAsJenCode *Statement
+	// ModelStructQualifier contains the quealifier code for entity
+	ModelStructQualifier *Statement
+	// IsIdUUID indicates if id is type UUID. If false is considered id is an int
+	IsIdUUID bool
 }
 
 func createUsefulData(input ModelCreationInput, goModName string) usefulData {
@@ -67,6 +69,7 @@ func createUsefulData(input ModelCreationInput, goModName string) usefulData {
 		pc = pluralize.NewClient()
 
 		entityNameAsPlural              = pc.Plural(input.EntityName)
+		modelSnakeCase                  = strcase.ToSnake(input.EntityName)
 		entityPluralNameAsCamelCase     = strcase.ToCamel(entityNameAsPlural)
 		repositoryStructName            = fmt.Sprintf("%sRepository", entityPluralNameAsCamelCase)
 		repositoryStructVarName         = fmt.Sprintf("%sRepository", strcase.ToLowerCamel(entityPluralNameAsCamelCase))
@@ -81,69 +84,80 @@ func createUsefulData(input ModelCreationInput, goModName string) usefulData {
 	)
 
 	return usefulData{
-		structNames: structNames{
-			repositoryStructName:               repositoryStructName,
-			repositoryStructConstructorName:    repositoryStructConstructorName,
-			repositoryStructVarName:            repositoryStructVarName,
-			modelServicePackageName:            modelServicePackageName,
-			modelStructName:                    modelStructName,
-			goModName:                          goModName,
-			controllerStructName:               controllerStructName,
-			controllerStructConstructorName:    controllerStructConstructorName,
-			receiverVarName:                    "c",
-			updateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
+		StructNames: StructNames{
+			ModelSnakeCase:                     modelSnakeCase,
+			RepositoryStructName:               repositoryStructName,
+			RepositoryStructConstructorName:    repositoryStructConstructorName,
+			RepositoryStructVarName:            repositoryStructVarName,
+			ModelServicePackageName:            modelServicePackageName,
+			ModelStructName:                    modelStructName,
+			GoModName:                          goModName,
+			ControllerStructName:               controllerStructName,
+			ControllerStructConstructorName:    controllerStructConstructorName,
+			ReceiverVarName:                    "c",
+			UpdateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
 		},
-		dirNames: dirNames{
-			baseModelDir:    baseModelDir,
-			internalBaseDir: "internal/",
-			serviceDir:      fmt.Sprintf("internal/%s", modelServicePackageName),
-			modelFile:       fmt.Sprintf("internal/domain/models/%s_creatore.go", modelServicePackageName),
-			controllerFile:  fmt.Sprintf("internal/%s/controller_creatore.go", modelServicePackageName),
-			repositoryFile:  fmt.Sprintf("internal/%s/repository_creatore.go", modelServicePackageName),
+		DirNames: DirNames{
+			BaseModelDir:    baseModelDir,
+			InternalBaseDir: "internal/",
+			ServiceDir:      fmt.Sprintf("internal/%s", modelServicePackageName),
+			ModelFile:       fmt.Sprintf("internal/domain/models/%s_creatore.go", modelServicePackageName),
+			ControllerFile:  fmt.Sprintf("internal/%s/controller_creatore.go", modelServicePackageName),
+			RepositoryFile:  fmt.Sprintf("internal/%s/repository_creatore.go", modelServicePackageName),
 		},
-		modelsKey:            modelsKey,
-		fields:               fieldsMeta,
-		idTypeAsJenCode:      idType,
-		isIdUUID:             idIsUUID,
-		modelStructQualifier: Qual(fmt.Sprintf("%s/%s", goModName, baseModelDir), modelStructName),
+		ModelsKey:            modelsKey,
+		Fields:               fieldsMeta,
+		IdTypeAsJenCode:      idType,
+		IsIdUUID:             idIsUUID,
+		ModelStructQualifier: Qual(fmt.Sprintf("%s/%s", goModName, baseModelDir), modelStructName),
 	}
 }
 
-type fieldMeta struct {
-	nameForTags            string
-	nameForStructAttribute string
-	nameForFunctionParams  string
-	typeAsJenCode          *Statement
-	field                  ModelFieldData
-	tags                   map[string]string
+type FieldMeta struct {
+	// NameForTags contains Field name as snake_case
+	NameForTags string
+	// NameForStructAttribute contains Field name as CamelCase
+	NameForStructAttribute string
+	// contains Field name as lowerCamelCase
+	NameForFunctionParams string
+	// TypeAsJenCode contains Field type as *Statement useful to generate code with jennifer
+	TypeAsJenCode *Statement
+	Type          string
+	// Field contains data as received
+	Field ModelFieldData
+	// Tags contains all need Tags for this Field
+	Tags     map[string]string
+	IsId     bool
+	IsIdUuid bool
 }
 
-func normalizeEntityFieldsData(input ModelCreationInput) ([]fieldMeta, *Statement, bool) {
-	idField, isUUID := createIdField(input)
+func normalizeEntityFieldsData(input ModelCreationInput) ([]FieldMeta, *Statement, bool) {
+	idField, isIdUUID := createIdField(input)
 	input.Fields = append([]ModelFieldData{idField}, input.Fields...)
 	var idType *Statement
 
-	return underscore.Map(input.Fields, func(f ModelFieldData) fieldMeta {
+	return underscore.Map(input.Fields, func(f ModelFieldData) FieldMeta {
 		nameForStructAttribute := strcase.ToCamel(f.Name)
 		nameForFunctionParams := strcase.ToLowerCamel(f.Name)
 		isId := f.Name == "Id"
-		if isId {
-			idType = getType(idField)
-		}
+		jenType, strType := getType(f)
 
-		return fieldMeta{
-			nameForTags:            strcase.ToSnake(f.Name),
-			nameForStructAttribute: nameForStructAttribute,
-			nameForFunctionParams:  nameForFunctionParams,
-			typeAsJenCode:          getType(f),
-			field:                  f,
-			tags:                   getFieldTags(f, isId),
+		return FieldMeta{
+			NameForTags:            strcase.ToSnake(f.Name),
+			NameForStructAttribute: nameForStructAttribute,
+			NameForFunctionParams:  nameForFunctionParams,
+			TypeAsJenCode:          jenType,
+			Type:                   strType,
+			Field:                  f,
+			Tags:                   getFieldTags(f, isId),
+			IsId:                   isId,
+			IsIdUuid:               isIdUUID,
 		}
-	}), idType, isUUID
+	}), idType, isIdUUID
 }
 
 func createIdField(input ModelCreationInput) (ModelFieldData, bool) {
-	if input.IsUuid {
+	if input.IsIdUuid {
 		return ModelFieldData{
 			Name: idKey,
 			Type: "uuid",
@@ -151,20 +165,20 @@ func createIdField(input ModelCreationInput) (ModelFieldData, bool) {
 	}
 	return ModelFieldData{
 		Name: idKey,
-		Type: "uint",
+		Type: "int",
 	}, false
 }
 
-func getType(f ModelFieldData) *Statement {
+func getType(f ModelFieldData) (*Statement, string) {
 	switch f.Type {
 	case "decimal":
-		return Qual("github.com/quagmt/udecimal", "Decimal")
+		return Qual("github.com/quagmt/udecimal", "Decimal"), "Decimal"
 	case "uuid":
-		return Qual("github.com/google/uuid", "UUID")
+		return Qual("github.com/google/uuid", "UUID"), "String"
 	case "time":
-		return Qual("time", "Time")
+		return Qual("time", "Time"), "DateTime"
 	default:
-		return Id(f.Type)
+		return Id(f.Type), strcase.ToCamel(f.Type)
 	}
 }
 
