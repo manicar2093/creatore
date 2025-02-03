@@ -1,3 +1,20 @@
+## v0.4.0 (2025-02-03)
+
+### Feat
+
+- add validation required if attrib is not optional. Closes #15
+- add logs and package.json generation on init command
+- add creation of prisma migration on gen command
+- add prisma creation on init command
+
+### Fix
+
+- change args to splitted to get optional from args
+
+### Refactor
+
+- change all sructs attribs to public
+
 ## v0.3.4 (2025-02-03)
 
 ### Fix
