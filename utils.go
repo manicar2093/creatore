@@ -77,6 +77,7 @@ func createUsefulData(input ModelCreationInput, goModName string) usefulData {
 		modelsKey                       = "models"
 		modelStructName                 = strcase.ToCamel(input.EntityName)
 		fieldsMeta, idType, idIsUUID    = normalizeEntityFieldsData(input)
+		baseModelDir                    = "internal/domain/models"
 	)
 
 	return usefulData{
@@ -93,7 +94,7 @@ func createUsefulData(input ModelCreationInput, goModName string) usefulData {
 			updateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
 		},
 		dirNames: dirNames{
-			baseModelDir:    "internal/domain/models",
+			baseModelDir:    baseModelDir,
 			internalBaseDir: "internal/",
 			serviceDir:      fmt.Sprintf("internal/%s", modelServicePackageName),
 			modelFile:       fmt.Sprintf("internal/domain/models/%s_creatore.go", modelServicePackageName),
@@ -104,7 +105,7 @@ func createUsefulData(input ModelCreationInput, goModName string) usefulData {
 		fields:               fieldsMeta,
 		idTypeAsJenCode:      idType,
 		isIdUUID:             idIsUUID,
-		modelStructQualifier: Qual(fmt.Sprintf("%s/%s", goModName, modelsKey), modelStructName),
+		modelStructQualifier: Qual(fmt.Sprintf("%s/%s", goModName, baseModelDir), modelStructName),
 	}
 }
 
