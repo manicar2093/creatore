@@ -3,6 +3,7 @@ package main
 import (
 	"errors"
 	"fmt"
+	"github.com/charmbracelet/log"
 	. "github.com/dave/jennifer/jen"
 	"net/url"
 	"os"
@@ -15,6 +16,7 @@ type newProjectData struct {
 }
 
 func createNewProject(input newProjectData) (string, error) {
+	log.Info("Creating project structure...")
 	asUrl, err := url.Parse(input.moduleName)
 	if err != nil {
 		return "", errors.Join(err, fmt.Errorf("%s is not a valid module moduleName. follow convention of use urls as github.com/<user>/<repo>, gitlab.com/<user>/<repo>, bitbucket.com/<user>/<repo>, etc", input.moduleName))
@@ -50,6 +52,8 @@ func createNewProject(input newProjectData) (string, error) {
 	); err != nil {
 		return "", err
 	}
+
+	log.Info("Creating prisma version: 6.3.0 migration sys...")
 	var prismaContent = `// This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
@@ -66,13 +70,37 @@ datasource db {
 		return "", err
 	}
 
+	var packageJsonContent = `{
+  "devDependencies": {
+    "prisma": "^6.3.0"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.3.0"
+  }
+}`
+	if err := os.WriteFile(fmt.Sprintf("%s/package.json", projectDirName), []byte(packageJsonContent), 0755); err != nil {
+		return "", err
+	}
+
+	log.Info("Creating env files...")
+	envs := []string{
+		"dev",
+		"test",
+	}
+	envContent := func(env, project string) string {
+		return fmt.Sprintf(`DATABASE_URL="postgresql://development:development@localhost:5432/%s_%s?sslmode=disable"
+ENVIRONMENT=%s
+PORT=3000`, project, env, env)
+
+	}
+	for _, env := range envs {
+		if err := os.WriteFile(fmt.Sprintf("%s/.env.%s", projectDirName, env), []byte(envContent(env, projectDirName)), 0755); err != nil {
+			return "", err
+		}
+	}
+
 	jf := NewFile("main")
 	jf.ImportAlias(echoQual, "echo")
-
-	//
-	//e.GET("/", func(c echo.Context) error {
-	//	return c.String(http.StatusOK, "Hello, World!")
-	//})
 
 	jf.Func().Id("main").Params().Block(
 		Id("e").Op(":=").Qual(echoQual, "New").Call(),

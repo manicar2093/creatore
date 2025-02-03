@@ -3,6 +3,7 @@ package main
 import (
 	"embed"
 	"fmt"
+	"github.com/charmbracelet/log"
 	"os"
 	"text/template"
 )
@@ -11,6 +12,7 @@ import (
 var templatesFS embed.FS
 
 func createPrismaMigration(input usefulData) error {
+	log.Infof("Creating prisma migration...")
 	tpl := template.Must(template.ParseFS(templatesFS, "templates/*"))
 
 	schemaFile, err := os.Create(fmt.Sprintf("prisma/schema/%s.prisma", input.ModelSnakeCase))
