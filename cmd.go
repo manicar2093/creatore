@@ -102,19 +102,21 @@ From this you can start using gen command.
 				}
 			}
 
-			if err := createNewProject(newProjectData{
+			projectDirName, err := createNewProject(newProjectData{
 				moduleName:        args[0],
 				isForcedConfirmed: isForceConfirmed,
-			}); err != nil {
+			})
+			if err != nil {
 				log.Error(err.Error())
 				return
 			}
 			log.Info("✅ Ready!")
-			log.Info(`🏁 Next steps:
+			log.Infof(`🏁 Next steps:
+➡️ Run 'cd %s'
 ➡️ Run 'go mod tidy' to install deps
 ➡️ Run 'creatore gen' command to create your first API resource
 ➡️ Enjoy! 😎
-`)
+`, projectDirName)
 		},
 	}
 )

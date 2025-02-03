@@ -14,10 +14,10 @@ type newProjectData struct {
 	isForcedConfirmed bool
 }
 
-func createNewProject(input newProjectData) error {
+func createNewProject(input newProjectData) (string, error) {
 	asUrl, err := url.Parse(input.moduleName)
 	if err != nil {
-		return errors.Join(err, fmt.Errorf("%s is not a valid module moduleName. follow convention of use urls as github.com/<user>/<repo>, gitlab.com/<user>/<repo>, bitbucket.com/<user>/<repo>, etc", input.moduleName))
+		return "", errors.Join(err, fmt.Errorf("%s is not a valid module moduleName. follow convention of use urls as github.com/<user>/<repo>, gitlab.com/<user>/<repo>, bitbucket.com/<user>/<repo>, etc", input.moduleName))
 	}
 
 	pathSlice := strings.Split(asUrl.Path, string(os.PathSeparator))
@@ -25,11 +25,11 @@ func createNewProject(input newProjectData) error {
 
 	if err := os.Mkdir(projectDirName, os.ModePerm); err != nil {
 		if !os.IsExist(err) {
-			return err
+			return "", err
 		}
 		if !input.isForcedConfirmed {
 
-			return fmt.Errorf("%s already exists, use -f to force creation", projectDirName)
+			return "", fmt.Errorf("%s already exists, use -f to force creation", projectDirName)
 		}
 	}
 
@@ -38,7 +38,7 @@ func createNewProject(input newProjectData) error {
 		fmt.Sprintf("%s/cmd/api", projectDirName),
 	} {
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
-			return err
+			return "", err
 		}
 	}
 
@@ -47,7 +47,7 @@ func createNewProject(input newProjectData) error {
 		[]byte(fmt.Sprintf("module %s\n", input.moduleName)),
 		0755,
 	); err != nil {
-		return err
+		return "", err
 	}
 
 	jf := NewFile("main")
@@ -76,5 +76,5 @@ func createNewProject(input newProjectData) error {
 		),
 	)
 
-	return jf.Save(fmt.Sprintf("%s/cmd/api/main.go", projectDirName))
+	return projectDirName, jf.Save(fmt.Sprintf("%s/cmd/api/main.go", projectDirName))
 }

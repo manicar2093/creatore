@@ -93,10 +93,10 @@ func createUsefulData(input ModelCreationInput, goModName string) usefulData {
 			updateSelectiveByIdInputStructName: "UpdateSelectiveByIdInput",
 		},
 		dirNames: dirNames{
-			baseModelDir:    "domain/models",
+			baseModelDir:    "internal/domain/models",
 			internalBaseDir: "internal/",
 			serviceDir:      fmt.Sprintf("internal/%s", modelServicePackageName),
-			modelFile:       fmt.Sprintf("domain/models/%s_creatore.go", modelServicePackageName),
+			modelFile:       fmt.Sprintf("internal/domain/models/%s_creatore.go", modelServicePackageName),
 			controllerFile:  fmt.Sprintf("internal/%s/controller_creatore.go", modelServicePackageName),
 			repositoryFile:  fmt.Sprintf("internal/%s/repository_creatore.go", modelServicePackageName),
 		},
