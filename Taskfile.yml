@@ -26,7 +26,7 @@ tasks:
     deps: [test-init]
     dir: test/
     cmds:
-      - creatore gen User names:string last_names:string password:string created_at:time --binary-id
+      - creatore gen User names:string last_names:string:optional password:string created_at:time other_id:uuid --binary-id
   test-remove:
     cmds:
       - rm -r test/
