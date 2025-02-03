@@ -36,6 +36,7 @@ func createNewProject(input newProjectData) (string, error) {
 	for _, dir := range []string{
 		fmt.Sprintf("%s/internal/domain/models", projectDirName),
 		fmt.Sprintf("%s/cmd/api", projectDirName),
+		fmt.Sprintf("%s/prisma/schema", projectDirName),
 	} {
 		if err := os.MkdirAll(dir, os.ModePerm); err != nil {
 			return "", err
@@ -47,6 +48,21 @@ func createNewProject(input newProjectData) (string, error) {
 		[]byte(fmt.Sprintf("module %s\n", input.moduleName)),
 		0755,
 	); err != nil {
+		return "", err
+	}
+	var prismaContent = `// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["prismaSchemaFolder"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}`
+	if err := os.WriteFile(fmt.Sprintf("%s/prisma/schema/schema.prisma", projectDirName), []byte(prismaContent), 0755); err != nil {
 		return "", err
 	}
 
