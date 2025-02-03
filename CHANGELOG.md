@@ -1,3 +1,9 @@
+## v0.3.1 (2025-02-03)
+
+### Fix
+
+- remove unused len function call
+
 ## v0.3.0 (2025-02-03)
 
 ### Feat
