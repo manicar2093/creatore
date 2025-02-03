@@ -60,7 +60,7 @@ func createNewProject(input newProjectData) (string, error) {
 
 	jf.Func().Id("main").Params().Block(
 		Id("e").Op(":=").Qual(echoQual, "New").Call(),
-		Id("e").Dot("Get").Call(
+		Id("e").Dot("GET").Call(
 			Lit("/"),
 			Func().Params(echoContextParam()).Error().Block(
 				Return(
