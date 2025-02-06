@@ -141,6 +141,9 @@ func normalizeEntityFieldsData(input ModelCreationInput) ([]FieldMeta, *Statemen
 		nameForFunctionParams := strcase.ToLowerCamel(f.Name)
 		isId := f.Name == "Id"
 		jenType, strType := getType(f)
+		if isId {
+			idType = jenType
+		}
 
 		return FieldMeta{
 			NameForTags:            strcase.ToSnake(f.Name),
